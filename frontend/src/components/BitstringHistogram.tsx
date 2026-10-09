@@ -65,11 +65,12 @@ export const BitstringHistogram: React.FC<BitstringHistogramProps> = ({ samples 
 
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={topSamples} margin={{ top: 24, right: 10, left: -10, bottom: 70 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-grid)" />
+          <BarChart data={topSamples} margin={{ top: 25, right: 15, left: 10, bottom: 65 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-grid)" vertical={false} />
             <XAxis
               dataKey="bitstring"
-              stroke="var(--c-muted2)" tick={{ fill: 'var(--c-muted2)' }}
+              stroke="var(--c-muted2)"
+              tick={{ fill: 'var(--c-muted2)' }}
               fontSize={11}
               fontFamily="monospace"
               angle={-45}
@@ -77,17 +78,30 @@ export const BitstringHistogram: React.FC<BitstringHistogramProps> = ({ samples 
               interval={0}
             />
             <YAxis
-              stroke="var(--c-muted2)" tick={{ fill: 'var(--c-muted2)' }}
+              stroke="var(--c-muted2)"
+              tick={{ fill: 'var(--c-muted2)' }}
               fontSize={12}
+              width={52}
               tickFormatter={(v: any) => formatPercent(v, 2)}
             />
             <Tooltip
-              contentStyle={{ backgroundColor: 'var(--c-surface2)', borderColor: 'var(--c-mid)', borderRadius: 0, fontSize: '11px', color: 'var(--c-fg)' }}
-              formatter={(val: any, _: any, item: any) => [
-                `${formatPercent(Number(val), 2)} (${item.payload.stateType})`,
-                'Probability'
-              ]}
-              labelFormatter={(label: any) => `Bitstring: ${label}`}
+              content={({ active, payload, label }: any) => {
+                if (!active || !payload?.[0]) return null;
+                const item = payload[0].payload;
+                return (
+                  <div className="bg-surface-elevated/95 border border-line-strong backdrop-blur-md px-3 py-2 text-xs text-text shadow-xl">
+                    <div className="font-mono text-[10px] text-muted mb-1">Bitstring: {label}</div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px]">
+                      <span className="text-muted">Probability:</span>
+                      <span className="text-right text-text font-medium">{formatPercent(item.prob, 2)}</span>
+                      <span className="text-muted">Status:</span>
+                      <span className={`text-right font-medium ${item.optimal ? 'text-text' : item.feasible ? 'text-gain' : 'text-loss'}`}>
+                        {item.stateType}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }}
             />
             <Bar dataKey="prob" isAnimationActive={false} label={renderOptimalLabel}>
               {topSamples.map((entry, index) => (

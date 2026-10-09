@@ -4,7 +4,13 @@ import {
   ScreenInfo,
   JobStatus,
   Study,
-  StudySummary
+  StudySummary,
+  Scenario,
+  StressResult,
+  ScenariosResponse,
+  StressEvaluateRequest,
+  StressCompareRequest,
+  PortfolioComparisonItem
 } from './types';
 
 import {
@@ -14,7 +20,10 @@ import {
   mockGetRun,
   mockCancelRun,
   mockListStudies,
-  mockGetStudy
+  mockGetStudy,
+  mockGetStressScenarios,
+  mockEvaluateStress,
+  mockCompareStress
 } from './mock';
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === '1';
@@ -94,3 +103,22 @@ export async function getStudy(id: string): Promise<Study> {
   if (USE_MOCKS) return mockGetStudy(id);
   return request<Study>(`/api/studies/${encodeURIComponent(id)}`);
 }
+
+// ============================================================================
+// Stress Testing Client Methods (Market Crash Stress Testing USP)
+// ============================================================================
+export async function getStressScenarios(): Promise<ScenariosResponse> {
+  if (USE_MOCKS) return mockGetStressScenarios();
+  return request<ScenariosResponse>('/api/stress/scenarios');
+}
+
+export async function evaluateStress(req: StressEvaluateRequest): Promise<StressResult> {
+  if (USE_MOCKS) return mockEvaluateStress(req);
+  return request<StressResult>('/api/stress/evaluate', postJson(req));
+}
+
+export async function compareStress(req: StressCompareRequest): Promise<PortfolioComparisonItem[]> {
+  if (USE_MOCKS) return mockCompareStress(req);
+  return request<PortfolioComparisonItem[]>('/api/stress/compare', postJson(req));
+}
+

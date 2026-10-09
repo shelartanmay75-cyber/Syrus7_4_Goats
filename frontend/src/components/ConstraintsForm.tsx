@@ -198,7 +198,7 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
                   </label>
                   <button
                     type="button"
-                    onClick={() => setTargetReturn(targetReturn === null ? 0.12 : null)}
+                    onClick={() => setTargetReturn(targetReturn === null ? 0.08 : null)}
                     className={`text-xs px-2.5 py-1 font-mono transition-colors border ${
                       targetReturn === null
                         ? 'bg-bg text-muted border-line'
@@ -210,18 +210,29 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
                 </div>
 
                 {targetReturn !== null ? (
-                  <div className="flex items-center gap-3 pt-1">
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="target-return"
+                        type="number"
+                        min={1}
+                        max={30}
+                        step={0.5}
+                        value={Math.round(targetReturn * 10000) / 100}
+                        onChange={(e) => setTargetReturn(Number(e.target.value) / 100)}
+                        className="w-20 min-h-[36px] bg-bg border border-line px-2.5 py-1 text-xs text-text font-mono focus:border-text"
+                      />
+                      <span className="text-[11px] text-muted">Min required net annual return after costs (%)</span>
+                    </div>
                     <input
-                      id="target-return"
-                      type="number"
-                      min={5}
-                      max={30}
+                      type="range"
+                      min={1}
+                      max={25}
                       step={0.5}
                       value={Math.round(targetReturn * 10000) / 100}
                       onChange={(e) => setTargetReturn(Number(e.target.value) / 100)}
-                      className="w-20 min-h-[36px] bg-bg border border-line px-2.5 py-1 text-xs text-text font-mono focus:border-text"
+                      className="w-full accent-accent-blue cursor-pointer"
                     />
-                    <span className="text-[14px] text-muted">Min required net annual return after costs (%)</span>
                   </div>
                 ) : (
                   <p className="text-[14px] text-faint">

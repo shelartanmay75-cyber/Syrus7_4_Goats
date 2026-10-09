@@ -269,3 +269,107 @@ export interface StudySummary {
   title: string;
   summary: string;
 }
+
+// ============================================================================
+// Stress Testing & Robustness Types (Market Crash Stress Testing USP)
+// ============================================================================
+export interface Scenario {
+  id: string;
+  name: string;
+  description: string;
+  scenario_type: 'predefined' | 'custom' | 'historical';
+  market_shock: number; // e.g. -0.20
+  target_sector: string | null;
+  sector_shock: number; // e.g. -0.15
+  volatility_multiplier: number; // e.g. 1.5
+  start_date?: string | null;
+  end_date?: string | null;
+  is_historical?: boolean;
+  stock_shocks?: Record<string, number>;
+}
+
+export interface StockStressImpact {
+  ticker: string;
+  symbol: string;
+  name: string;
+  sector: string;
+  weight: number;
+  initial_value: number;
+  stressed_return: number;
+  stressed_value: number;
+  loss_amount: number;
+  loss_contribution_pct: number;
+}
+
+export interface SectorStressImpact {
+  sector: string;
+  weight: number;
+  initial_value: number;
+  stressed_value: number;
+  loss_amount: number;
+  stressed_return: number;
+}
+
+export interface StressResult {
+  scenario: Scenario;
+  initial_value: number;
+  stressed_value: number;
+  loss_amount: number;
+  portfolio_return: number;
+  baseline_volatility: number;
+  stressed_volatility: number;
+  resilience_score: number;
+  stocks: StockStressImpact[];
+  sectors: SectorStressImpact[];
+  summary: string;
+  reconciled: boolean;
+}
+
+export interface ScenariosResponse {
+  predefined: Scenario[];
+  historical: Scenario[];
+}
+
+export interface PortfolioStockInput {
+  ticker: string;
+  weight?: number;
+}
+
+export interface StressEvaluateRequest {
+  portfolio: Array<PortfolioStockInput | string>;
+  capital: number;
+  scenario: Scenario;
+}
+
+export interface CandidatePortfolioInput {
+  id: string;
+  label: string;
+  kind: string;
+  feasible: boolean;
+  objective?: number | null;
+  capital: number;
+  items: Array<PortfolioStockInput | string>;
+}
+
+export interface StressCompareRequest {
+  candidates: CandidatePortfolioInput[];
+  scenario: Scenario;
+}
+
+export interface PortfolioComparisonItem {
+  id: string;
+  label: string;
+  kind: string;
+  feasible: boolean;
+  objective?: number | null;
+  initial_value: number;
+  stressed_value: number;
+  loss_amount: number;
+  portfolio_return: number;
+  baseline_volatility: number;
+  stressed_volatility: number;
+  top_sector: string;
+  top_sector_pct: number;
+  resilience_score: number;
+}
+

@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from qportfolio.api.jobs import job_runner
+from qportfolio.api.stress import router as stress_router
 from qportfolio.api.studies import get_study, list_studies
 from qportfolio.contracts import (
     AssetInfo,
@@ -208,3 +209,8 @@ def get_study_detail(study_id: str) -> Study:
     if study is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Study '{study_id}' not found")
     return study
+
+
+# --- 2.8 Stress Testing -----------------------------------------------------
+app.include_router(stress_router)
+

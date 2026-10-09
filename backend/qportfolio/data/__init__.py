@@ -27,6 +27,18 @@ from qportfolio.data.risk import (
     build_market,
 )
 from qportfolio.data.screen import QubitsInfo, ScreenInfo, prescreen
+from qportfolio.data.stress import (
+    PortfolioComparisonItem,
+    ScenarioConfig,
+    SectorStressImpact,
+    StockStressImpact,
+    StressResult,
+    compare_portfolios,
+    compute_resilience_score,
+    evaluate_stress,
+    get_historical_scenarios,
+    get_predefined_scenarios,
+)
 from qportfolio.data.universe import Asset, load_universe
 
 __all__ = [
@@ -41,10 +53,19 @@ __all__ = [
     "PriceData",
     "QubitsInfo",
     "RF",
+    "ScenarioConfig",
     "ScreenInfo",
+    "SectorStressImpact",
+    "StockStressImpact",
+    "StressResult",
     "Windows",
     "benchmark_oos",
     "build_market",
+    "compare_portfolios",
+    "compute_resilience_score",
+    "evaluate_stress",
+    "get_historical_scenarios",
+    "get_predefined_scenarios",
     "linear_costs",
     "load_prices",
     "load_universe",

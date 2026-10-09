@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Optimise } from './pages/Optimise';
+import { StressTest } from './pages/StressTest';
 import { Evidence } from './pages/Evidence';
 import { Method } from './pages/Method';
 import { GlossaryPage } from './pages/GlossaryPage';
 import { GlossaryDrawer } from './components/Glossary';
 import { getHealth } from './api/client';
+import { RunResult } from './api/types';
 import { Landing } from './pages/Landing';
 import { Tour } from './components/tour/Tour';
 import { TOUR_DONE_KEY } from './components/tour/tourSteps';
 
-type Tab = 'optimise' | 'method' | 'evidence' | 'glossary';
+type Tab = 'optimise' | 'stress' | 'method' | 'evidence' | 'glossary';
 
 interface NavItem {
   id: Tab;
@@ -23,6 +25,8 @@ export const App: React.FC = () => {
   const [glossaryDrawerOpen, setGlossaryDrawerOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [selectedSolverKey, setSelectedSolverKey] = useState<string>('brute_force');
   const [home, setHome] = useState(true);
   const [tourOpen, setTourOpen] = useState(false);
   // White theme by default; the choice is remembered in this browser.
@@ -86,6 +90,22 @@ export const App: React.FC = () => {
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+        </svg>
+      )
+    },
+    {
+      id: 'stress',
+      label: 'Market Stress Test',
+      sublabel: 'Crash Resilience & Shocks',
+      icon: (active) => (
+        <svg
+          className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-accent-blue-hover' : 'text-muted'}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       )
     },
@@ -333,6 +353,7 @@ export const App: React.FC = () => {
               <span className="label text-[14px] text-muted hidden sm:inline">PORTFOLIO-PULSE //</span>
               <span className="text-sm font-medium tracking-wider text-text uppercase">
                 {activeTab === 'optimise' && 'Portfolio Optimisation & Solvers'}
+                {activeTab === 'stress' && 'Market Crash Stress Testing & Resilience'}
                 {activeTab === 'method' && 'Methodology & QUBO Specification'}
                 {activeTab === 'evidence' && 'Empirical Quantum Benchmarks'}
                 {activeTab === 'glossary' && 'Quantum & Quantitative Lexicon'}
@@ -366,7 +387,19 @@ export const App: React.FC = () => {
         <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Kept mounted so running jobs and results survive navigation */}
           <div hidden={activeTab !== 'optimise'}>
-            <Optimise />
+            <Optimise
+              runResult={runResult}
+              onRunResultChange={setRunResult}
+              onSelectSolverChange={setSelectedSolverKey}
+              onNavigateToStress={() => handleTabChange('stress')}
+            />
+          </div>
+          <div hidden={activeTab !== 'stress'}>
+            <StressTest
+              runResult={runResult}
+              initialSolverKey={selectedSolverKey}
+              onNavigateToOptimise={() => handleTabChange('optimise')}
+            />
           </div>
           {activeTab === 'method' && <Method />}
           {activeTab === 'evidence' && <Evidence />}

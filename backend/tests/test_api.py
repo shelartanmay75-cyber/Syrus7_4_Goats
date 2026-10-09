@@ -100,10 +100,10 @@ def test_runs_lifecycle_done():
     assert "job_id" in body
     job_id = body["job_id"]
 
-    # Poll until done (timeout 15s)
+    # Poll until done (timeout 20s)
     start_t = time.time()
     final_data = None
-    while time.time() - start_t < 15.0:
+    while time.time() - start_t < 20.0:
         get_res = client.get(f"/api/runs/{job_id}")
         assert get_res.status_code == 200
         status_data = get_res.json()

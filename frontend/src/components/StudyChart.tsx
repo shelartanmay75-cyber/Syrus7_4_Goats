@@ -65,14 +65,27 @@ export const StudyChart: React.FC<StudyChartProps> = ({ study }) => {
       {/* Multi-Series Recharts LineChart */}
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-grid)" />
-            <XAxis dataKey="x" stroke="var(--c-muted2)" tick={{ fill: 'var(--c-muted2)' }} fontSize={13} />
-            <YAxis stroke="var(--c-muted2)" tick={{ fill: 'var(--c-muted2)' }} fontSize={13} width={48} />
+          <LineChart data={chartData} margin={{ top: 12, right: 20, left: 15, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-grid)" vertical={false} />
+            <XAxis dataKey="x" stroke="var(--c-muted2)" tick={{ fill: 'var(--c-muted2)' }} fontSize={12} tickLine={false} />
+            <YAxis stroke="var(--c-muted2)" tick={{ fill: 'var(--c-muted2)' }} fontSize={12} width={52} tickLine={false} />
             <Tooltip
-              contentStyle={{ backgroundColor: 'var(--c-surface2)', borderColor: 'var(--c-mid)', borderRadius: 0, fontSize: '11px', color: 'var(--c-fg)' }}
-              labelFormatter={(val: any) => `x = ${val}`}
-              formatter={(val: any, name: any) => [fmt(val), name]}
+              content={({ active, payload, label }: any) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="bg-surface-elevated/95 border border-line-strong backdrop-blur-md px-3.5 py-2.5 text-xs text-text shadow-xl space-y-1">
+                    <div className="font-mono text-[10px] text-muted border-b border-line pb-1">
+                      {study.x_label} = {label}
+                    </div>
+                    {payload.map((p: any, i: number) => (
+                      <div key={i} className="flex justify-between items-center gap-4 font-mono text-[11px]">
+                        <span className="text-muted">{p.name}:</span>
+                        <span className="text-text font-medium">{fmt(p.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }}
             />
 
             {study.series.map((s, idx) => {
