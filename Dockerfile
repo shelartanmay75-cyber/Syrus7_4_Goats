@@ -1,8 +1,9 @@
+# Root Dockerfile for Render / Docker deployments
 FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install system build dependencies for numerical and quantum packages
+# Install system build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -11,13 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for fast, reliable package installation
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy and install python dependencies
-COPY requirements.txt .
+# Copy and install backend dependencies
+COPY backend/requirements.txt .
 RUN uv pip install --system --no-cache -r requirements.txt
 
-# Copy backend package and data snapshots
-COPY qportfolio ./qportfolio
-COPY data ./data
+# Copy backend application and data snapshots
+COPY backend/qportfolio ./qportfolio
+COPY backend/data ./data
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONUTF8=1

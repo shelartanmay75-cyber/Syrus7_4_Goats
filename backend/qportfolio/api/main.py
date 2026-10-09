@@ -49,10 +49,13 @@ else:
     cors_origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        *[o.strip() for o in cors_env.split(",") if o.strip()],
+        *[o.strip().rstrip("/") for o in cors_env.split(",") if o.strip()],
     ]
     cors_credentials = True
-    origin_regex = r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$"
+    origin_regex = (
+        r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$"
+        r"|^https://.*\.vercel\.app$"
+    )
 
 app.add_middleware(
     CORSMiddleware,
