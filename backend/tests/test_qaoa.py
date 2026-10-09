@@ -185,3 +185,8 @@ def test_noise_block_has_ideal_and_noisy_metrics():
     assert set(noise["ideal"]) == set(noise["noisy"]) == METRIC_KEYS
     assert noise["ideal"] == block["metrics"]
     assert noise["transpiled"]["depth"] > 0 and noise["transpiled"]["two_qubit_gates"] > 0
+    assert noise["shots"] == 256
+    pick = noise["best_noisy"]
+    if pick is not None:  # the noisy pick is a real sampled portfolio with exactly K stocks and its own estimates
+        assert len(pick["selection"]) == problem.k and pick["volatility"] >= 0
+        assert isinstance(pick["same_as_ideal"], bool)

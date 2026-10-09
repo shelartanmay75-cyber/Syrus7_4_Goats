@@ -11,6 +11,7 @@ import { RunResult } from './api/types';
 import { Landing } from './pages/Landing';
 import { Tour } from './components/tour/Tour';
 import { TOUR_DONE_KEY } from './components/tour/tourSteps';
+import { downloadReportCsv } from './lib/report';
 
 type Tab = 'optimise' | 'stress' | 'report' | 'method' | 'evidence' | 'glossary';
 
@@ -399,6 +400,12 @@ export const App: React.FC = () => {
             <button type="button" onClick={() => start(true)} className="inline-flex items-center px-2 py-0.5 border border-line-strong text-[13px] font-mono uppercase text-muted hover:text-text">
               Tour
             </button>
+            {runResult && (
+              <button type="button" onClick={() => downloadReportCsv(runResult)} title="Download the full report for the latest run"
+                className="inline-flex items-center px-2 py-0.5 border border-accent-blue text-[13px] font-mono uppercase text-accent-blue-hover hover:opacity-80">
+                Download CSV
+              </button>
+            )}
             {modeButton}
             {themeButton}
             <span data-research className="hidden sm:inline-flex items-center px-2 py-0.5 bg-surface text-muted border border-line text-[13px] font-mono">

@@ -231,6 +231,7 @@ Base path is `/api`. Every response is JSON. An error body looks like `{"detail"
 - **`volatility`:** equals `sqrt(variance)`.
 - **`assets` / `correlation` (portfolio report, optional):** `assets` has one row per stock of the requested universe (a superset of the screened, solved one; the same market the betas use); `exp_return` is the annualised mean log return (mu) and `volatility` is `sqrt(diag(Sigma))`, both from the estimation window only. `correlation` is `{tickers, matrix, covariance}` for the recommended portfolio's stocks: `matrix` = `cov / (sd_i * sd_j)` (diagonal 1, values in [-1, 1]); `covariance` = annualised covariance of daily log returns (x252), the same Sigma the optimiser uses.
 - **`qaoa.noise`:** when noise is on, `{"backend": "FakeGuadalupeV2", "ideal": {metrics}, "noisy": {metrics}, "transpiled": {"depth": int, "two_qubit_gates": int}}`.
+  - Also `"shots": int` (noisy shots, capped at 1024) and `"best_noisy"`, the best feasible noisy sample as `{"selection": [tickers], "objective", "exp_return" (annualised log), "volatility", "same_as_ideal": bool}`, or `null` when no noisy sample is feasible (never repaired). Noise is on by default in the frontend.
 - **`details` per solver:**
   - relaxation: `relaxed_x` and `rounding`;
   - annealing: `seed` and `sweeps`;

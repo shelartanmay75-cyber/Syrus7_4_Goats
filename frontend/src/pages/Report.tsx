@@ -126,36 +126,8 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
   const range = logRet !== null && isNum(vol) ? R.growthRange(logRet, vol, months) : null;
   const plNow = logRet === null ? null : R.projectedPL(capital, logRet, months);
 
-  const download = () => {
-    const f = (x: number | null | undefined) => (isNum(x) ? +x.toFixed(6) : null);
-    const csv = R.toCsv([
-      ['Portfolio report (estimates, not promises; educational tool, not investment advice)'],
-      ['Generated', new Date().toISOString().slice(0, 10)], ['Run', result.run_id], ['Method', s.label], ['Capital (INR)', capital],
-      ['Data source', data.source], ['Data as of', data.as_of], ['Estimation window', estWin], ['Test window (out-of-sample)', testWin], [],
-      ['Holdings'], ['Ticker', 'Name', 'Sector', 'Weight', 'Amount (INR)', 'Est. annual log return', 'Est. volatility', 'Beta', 'Contribution to log return'],
-      ...h.map((x) => [x.ticker, x.name, x.sector, f(x.weight), Math.round(capital * x.weight), f(x.mu), f(x.vol), f(x.beta), f(x.contribution)]), [],
-      ['Metrics'], ['Metric', 'Value'],
-      ['Expected annual log return', f(logRet)], ['Expected annual return (exp(mu)-1)', f(annual)], ['Estimated volatility', f(vol)], ['Sharpe (RF 5.57%)', f(sharpe)],
-      ['Modelled transaction cost (fraction of capital)', f(buyCost)], ['Test-year return', f(oos?.ann_return)], ['Test-year volatility', f(oos?.ann_vol)],
-      ['Test-year Sharpe', f(oos?.sharpe)], ['Test-year max drawdown', f(oos?.max_drawdown)], ['NIFTY 50 test-year return', f(nifty?.ann_return)],
-      ['NIFTY 50 test-year volatility', f(nifty?.ann_vol)], ['NIFTY 50 test-year Sharpe', f(nifty?.sharpe)], ['NIFTY 50 test-year max drawdown', f(nifty?.max_drawdown)], [],
-      ['Projection (compounded)'], ['Months', 'Growth', 'Profit/loss (INR)'],
-      ...R.HORIZONS.map((m) => [m, logRet === null ? null : f(R.growth(logRet, m)), logRet === null ? null : Math.round(R.projectedPL(capital, logRet, m))]), [],
-      ['Scenarios (hypothetical; stock move = beta x market move)'], ['Scenario', 'Market move', 'Portfolio return', 'Profit/loss (INR)', 'vs base (INR)', 'NIFTY 50 profit/loss (INR)'],
-      ...scen.map((x) => [x.scenario.name + (x.scenario.rebound === undefined ? '' : ` (crash ${f(x.scenario.market)} then rebound ${f(x.scenario.rebound)})`), f(x.market), f(x.portfolioReturn), Math.round(x.pl), x.vsBase === null ? null : Math.round(x.vsBase), Math.round(x.niftyPL)]), [],
-      ['Expected vs actual'], ['Portfolio', 'Estimated annual return', 'Realised test-year return', 'Absolute error'],
-      ...evA.map((x) => [x.label, f(x.estimated), f(x.actual), f(x.absError)]), [],
-      ['Methods'], ['Method', 'Stocks', 'Est. annual return', 'Realised', 'Est. volatility', 'Objective', 'Runtime (s)', 'Valid', 'Approx ratio'],
-      ...result.solvers.map((x) => [x.label, (x.selection ?? []).join(' '), isNum(x.exp_return) ? f(R.simpleAnnual(x.exp_return)) : null, f(x.oos?.ann_return), f(x.volatility), f(x.objective), f(x.runtime_s), x.feasible ? 'yes' : 'no', f(x.approx_ratio)]), [],
-      ['Assumptions'], ['Returns: mean daily log return x252 over the estimation window; weights equal (1/K); stock move = beta x market move (idiosyncratic part 0)'],
-      ['Backtest: buy-and-hold over the test window; no rebalancing, slippage, taxes or separately modelled dividends; one-time buying cost is in the objective but not deducted in the backtest'],
-    ]);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = `portfolio-report-${result.run_id}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  const download = () => R.downloadReportCsv(result, capital, scenarios);
+  const noise = R.noiseSummary(result);
 
   return (
     <div className="space-y-8">
@@ -481,8 +453,48 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
         </Calc>
       </Part>
 
-      {/* H. Heatmaps */}
-      <Part id="rp-h" letter="H · Heatmaps" title="Heatmap analysis" lead="The same portfolio seen as colour grids: how the stocks move together, how the methods differ, where the risk sits, and how it did month by month.">
+      {/* H. Noise analysis */}
+      <Part id="rp-noise" letter="H · Noise" title="Noise analysis" lead="Real quantum chips make errors. Here the same QAOA circuit is sampled again on a simulated IBM chip with real-device error rates, to show what noise does to the answer and to its expected return.">
+        {noise ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className={tableCls}>
+                <thead><tr className="text-left"><th className="py-1 pr-2">What we measure</th><th className="py-1 pr-2 text-right">Ideal simulator</th><th className="py-1 text-right">Noisy simulator ({noise.backend})</th></tr></thead>
+                <tbody>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Chance of sampling the best portfolio</td><td className="py-1 pr-2 text-right tabular-nums">{formatPct(noise.ideal.p_opt, { digits: 2 })}</td><td className="py-1 text-right tabular-nums">{formatPct(noise.noisy.p_opt, { digits: 2 })}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">A random guess would get</td><td className="py-1 pr-2 text-right tabular-nums">{formatPct(noise.ideal.p_random, { digits: 2 })}</td><td className="py-1 text-right tabular-nums">{formatPct(noise.noisy.p_random, { digits: 2 })}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Samples that obey every rule</td><td className="py-1 pr-2 text-right tabular-nums">{formatPct(noise.ideal.feasible_rate)}</td><td className="py-1 text-right tabular-nums">{formatPct(noise.noisy.feasible_rate)}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Approximation ratio (1.000 = best)</td><td className="py-1 pr-2 text-right tabular-nums">{fix2(noise.ideal.approx_ratio)}</td><td className="py-1 text-right tabular-nums">{fix2(noise.noisy.approx_ratio)}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Portfolio QAOA would report</td><td className="py-1 pr-2 text-right">{noise.idealPick ? noise.idealPick.selection.map(R.symbol).join(', ') : 'none'}</td><td className="py-1 text-right">{noise.noisyPick ? noise.noisyPick.selection.map(R.symbol).join(', ') : 'none'}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Its estimated annual return</td><td className="py-1 pr-2 text-right">{noise.idealPick ? <Delta x={R.simpleAnnual(noise.idealPick.exp_return)} /> : '—'}</td><td className="py-1 text-right">{noise.noisyPick ? <Delta x={R.simpleAnnual(noise.noisyPick.exp_return)} /> : '—'}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Its estimated volatility</td><td className="py-1 pr-2 text-right tabular-nums">{formatPct(noise.idealPick?.volatility)}</td><td className="py-1 text-right tabular-nums">{formatPct(noise.noisyPick?.volatility)}</td></tr>
+                  <tr className="border-t border-line"><td className="py-1 pr-2">Shots (samples taken)</td><td className="py-1 pr-2 text-right tabular-nums">{noise.shots.ideal}</td><td className="py-1 text-right tabular-nums">{noise.shots.noisy ?? '—'}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-sm mt-3">
+              {!noise.noisyPick
+                ? 'No noisy sample obeyed every rule, so on this noisy chip QAOA would report no portfolio at all. Samples are never repaired.'
+                : noise.noisyPick.same_as_ideal
+                  ? `Noise changed how often the best portfolio was sampled (${formatPct(noise.ideal.p_opt, { digits: 2 })} → ${formatPct(noise.noisy.p_opt, { digits: 2 })}), but the best valid noisy sample is the same portfolio, so the expected return is unchanged.`
+                  : noise.returnShift !== null
+                    ? `Under noise QAOA would report a different portfolio. Its estimated annual return differs by ${formatPct(noise.returnShift, { sign: true })} (about ${signed(capital * noise.returnShift)} a year on ${formatINR(capital)}).`
+                    : 'Under noise QAOA would report a portfolio while the noise-free run found none valid.'}
+            </p>
+            <p className="text-sm text-muted mt-2">
+              Compiled for the chip, the circuit has depth {noise.transpiled.depth} and {noise.transpiled.two_qubit_gates} two-qubit gates. Each two-qubit gate adds error, which is why deeper circuits suffer more.
+            </p>
+            <Calc>
+              <p>The QAOA angles are optimised on the ideal simulator; the same circuit and angles are then sampled with the {noise.backend} noise model (an IBM 16-qubit device's gate, readout and decoherence errors), using up to 1,024 shots. Every sample is checked by the same rules as every other method. The reported portfolio is the best valid sample; its estimated return is exp(μ'x / K) − 1 and its volatility √(x'Σx) / K, both from the estimation window. This is a simulation of noise, not a run on real hardware.</p>
+            </Calc>
+          </>
+        ) : (
+          <p className="text-sm text-muted">Noise analysis was off for this run. In Quantum research mode, open the advanced quantum settings, turn on IBM Guadalupe noise and run again.</p>
+        )}
+      </Part>
+
+      {/* I. Heatmaps */}
+      <Part id="rp-h" letter="I · Heatmaps" title="Heatmap analysis" lead="The same portfolio seen as colour grids: how the stocks move together, how the methods differ, where the risk sits, and how it did month by month.">
         <div className="space-y-3">
           <details open className="border border-line p-3">
             <summary className="cursor-pointer text-text">Diversification</summary>
@@ -578,7 +590,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
       </Part>
 
       {/* I. Data and methodology */}
-      <Part id="rp-i" letter="I · Sources" title="Data sources and methodology" research lead="Where the numbers come from and what they leave out.">
+      <Part id="rp-i" letter="J · Sources" title="Data sources and methodology" research lead="Where the numbers come from and what they leave out.">
         <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
           <li>Prices: Yahoo Finance through the yfinance library (adjusted closes), read from this app's saved copy (source: {data.source}, as of {data.as_of}). The live sources were not checked when this report was made.</li>
           <li>Benchmark: the NSE NIFTY 50 index (^NSEI) over the same test dates. Stocks: today's NIFTY 50 list{data.notes.length ? ` (${data.notes.join(' ')})` : ''}.</li>
@@ -588,6 +600,14 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
         </ul>
         <p className="text-sm text-text mt-3">Educational tool, not investment advice.</p>
       </Part>
+
+      <div className="no-print flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+        <p className="text-sm text-muted">Take the whole report with you: every table above, with the assumptions, in one file.</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={download} className="px-4 py-2 text-xs font-mono uppercase bg-accent-blue text-[#fff]">Download CSV</button>
+          <button type="button" onClick={() => window.print()} className="px-4 py-2 text-xs font-mono uppercase border border-accent-blue text-accent-blue-hover">Print / Save as PDF</button>
+        </div>
+      </div>
     </div>
   );
 }

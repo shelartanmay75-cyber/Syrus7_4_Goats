@@ -24,6 +24,7 @@ import { HonestyPanel } from '../components/HonestyPanel';
 import { StressTest } from '../components/StressTest';
 import { MethodCompare } from '../components/MethodCompare';
 import { HistoricalReplay } from '../components/HistoricalReplay';
+import { downloadReportCsv } from '../lib/report';
 import { OutOfSample } from '../components/OutOfSample';
 import { getSolverStyle } from '../lib/chartColors';
 import { SolverMarker } from '../components/SolverMarker';
@@ -35,7 +36,7 @@ const DEFAULT_QAOA: QaoaSettings = {
   init: 'ramp',
   shots: 2048,
   maxiter: 80,
-  noise: false,
+  noise: true, // noise analysis on by default: ideal vs simulated IBM-hardware sampling
   seed: 7
 };
 
@@ -953,6 +954,12 @@ export const Optimise: React.FC<OptimiseProps> = ({
                   <StressTest key={selectedSolver.solver} solver={selectedSolver} betas={runResult.betas} />
 
                   <div data-research><HistoricalReplay result={runResult} /></div>
+
+                  {/* End of the analysis: take the full report away */}
+                  <div className="bg-surface border border-line p-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted">Download the full report for this run: holdings, estimates, scenarios, backtest, all four methods, noise analysis and assumptions.</p>
+                    <button type="button" onClick={() => downloadReportCsv(runResult)} className="px-4 py-2 text-xs font-mono uppercase bg-accent-blue text-[#fff]">Download CSV</button>
+                  </div>
 
                   {/* Markowitz Efficient Frontier */}
                   <div data-research><FrontierChart

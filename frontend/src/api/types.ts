@@ -135,13 +135,24 @@ export interface QaoaCircuit {
 export interface NoiseMetrics {
   approx_ratio: number;
   p_opt: number;
+  p_random?: number;
   feasible_rate: number;
+}
+
+export interface NoisyPick {
+  selection: string[];
+  objective: number;
+  exp_return: number; // annualised log return
+  volatility: number;
+  same_as_ideal: boolean;
 }
 
 export interface NoiseReport {
   backend: string;
   ideal: NoiseMetrics;
   noisy: NoiseMetrics;
+  shots?: number | null;
+  best_noisy?: NoisyPick | null;
   transpiled: {
     depth: number;
     two_qubit_gates: number;

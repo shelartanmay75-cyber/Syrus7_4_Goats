@@ -189,11 +189,22 @@ class TranspiledInfo(BaseModel):
     two_qubit_gates: int
 
 
+class NoisyPick(BaseModel):
+    """The best feasible portfolio in the noisy samples (no repair), with its estimation-window estimates."""
+    selection: list[str]
+    objective: float
+    exp_return: float  # annualised log return, as SolverResult.exp_return
+    volatility: float
+    same_as_ideal: bool  # same stocks as the best feasible noise-free sample
+
+
 class NoiseInfo(BaseModel):
     backend: str
     ideal: QaoaMetrics
     noisy: QaoaMetrics
     transpiled: TranspiledInfo
+    shots: int | None = None  # noisy shots (capped at 1024)
+    best_noisy: NoisyPick | None = None  # None when no noisy sample is feasible
 
 
 class QaoaBlock(BaseModel):

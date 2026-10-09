@@ -103,16 +103,28 @@ def qaoa_solve(
         m = qaoa_metrics(samples, landscape)
         return samples, m.model_dump(), m.top_samples
 
+    def best_pick(noisy: list[Sample], ideal: list[Sample]) -> dict | None:
+        """The portfolio QAOA would report from the noisy samples, its estimates, and whether it is the noise-free pick."""
+        pick = min((s for s in noisy if s.feasible), key=lambda s: s.objective, default=None)
+        if pick is None:
+            return None
+        ideal_best = min((s for s in ideal if s.feasible), key=lambda s: s.objective, default=None)
+        k = len(problem.tickers)
+        ev = judged[pick.bitstring]
+        return {"selection": [t for t, b in zip(problem.tickers, pick.bitstring) if b == "1"],
+                "objective": ev.objective, "exp_return": ev.exp_return, "volatility": math.sqrt(max(ev.variance, 0.0)),
+                "same_as_ideal": ideal_best is not None and ideal_best.bitstring[:k] == pick.bitstring[:k]}
+
     samples, metrics, top = summarise(sample_ideal(circuit, values, settings.shots, settings.seed))
     stats = transpile_stats(circuit)
     transpiled = {"depth": stats["depth"], "two_qubit_gates": stats["two_qubit_gates"]}
     noise = None
     if settings.noise:
-        # Noisy sampling dominates the live-run time, so it is capped (ideal sampling is untouched). NoiseInfo has no
-        # field for the shot count and pydantic would silently drop an extra key, so it is not recorded.
+        # Noisy sampling dominates the live-run time, so it is capped (ideal sampling is untouched).
         noisy_shots = min(settings.shots, NOISY_SHOTS_CAP)
-        noisy_metrics = summarise(sample_noisy(circuit, values, noisy_shots, settings.seed))[1]
-        noise = {"backend": BACKEND_NAME, "ideal": metrics, "noisy": noisy_metrics, "transpiled": transpiled}
+        noisy_samples, noisy_metrics, _ = summarise(sample_noisy(circuit, values, noisy_shots, settings.seed))
+        noise = {"backend": BACKEND_NAME, "ideal": metrics, "noisy": noisy_metrics, "transpiled": transpiled,
+                 "shots": noisy_shots, "best_noisy": best_pick(noisy_samples, samples)}
 
     feasible = [s for s in samples if s.feasible]
     solver = f"qaoa_{settings.variant}"

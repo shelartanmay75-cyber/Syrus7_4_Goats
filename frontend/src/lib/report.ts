@@ -1,4 +1,4 @@
-// Portfolio Report maths, all in one place. Pure functions over a RunResult: no DOM, no network.
+// Portfolio Report maths, all in one place. Pure functions over a RunResult (no network); only downloadReportCsv touches the DOM.
 // Returns and volatility are annualised decimals (0.12 = 12%). "Log return" means the annualised mean of daily log returns (x252)
 // from the estimation window, the same mu the optimiser uses. Nothing here looks at test-window prices except the backtest helpers.
 import type { Candle, RunResult, SolverResult } from '../api/types';
@@ -239,3 +239,89 @@ const csvCell = (v: string | number | null | undefined) => {
 };
 /** Rows to CSV text, with a byte-order mark so Excel reads the rupee sign and the arrows correctly. */
 export const toCsv = (rows: (string | number | null | undefined)[][]) => '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+
+// ---- Noise analysis -------------------------------------------------------------------------------------------------
+
+/** Ideal vs noisy QAOA: what the simulated hardware noise did to the sampling and to the portfolio QAOA would report. */
+export function noiseSummary(r: RunResult) {
+  const n = r.qaoa.noise;
+  if (!n) return null;
+  const q = r.solvers.find((s) => s.kind === 'quantum') ?? null;
+  const idealPick = q && q.feasible && q.selection && isNum(q.exp_return)
+    ? { selection: q.selection, exp_return: q.exp_return, volatility: q.volatility ?? null } : null;
+  const noisyPick = n.best_noisy ?? null;
+  return {
+    backend: n.backend, ideal: n.ideal, noisy: n.noisy, transpiled: n.transpiled,
+    shots: { ideal: r.request.qaoa.shots, noisy: n.shots ?? null },
+    idealPick, noisyPick,
+    /** Change in the estimated annual return of the reported portfolio caused by noise (simple returns), or null. */
+    returnShift: idealPick && noisyPick ? simpleAnnual(noisyPick.exp_return) - simpleAnnual(idealPick.exp_return) : null,
+  };
+}
+
+// ---- CSV export (one builder for every Download CSV button) --------------------------------------------------------
+
+type Row = (string | number | null | undefined)[];
+
+/** The full report as CSV text, from this run's own numbers. `capital` and `scenarios` default to the run's. */
+export function reportCsv(r: RunResult, capital = r.request.capital, scenarios = defaultScenarios(r)): string | null {
+  const s = reportSolver(r);
+  if (!s) return null;
+  const f = (x: number | null | undefined) => (isNum(x) ? +x.toFixed(6) : null);
+  const { data } = r;
+  const estWin = `${data.est_window[0]} to ${data.est_window[1]}`, testWin = `${data.test_window[0]} to ${data.test_window[1]}`;
+  const h = holdings(r, s);
+  const logRet = portfolioLogReturn(s, h);
+  const vol = s.volatility, oos = s.oos, nifty = r.benchmarks.nifty50;
+  const noise = noiseSummary(r);
+  const noiseRows: Row[] = noise ? [
+    [`Noise analysis (QAOA sampled on the simulated ${noise.backend} chip; angles optimised without noise)`], ['Metric', 'Ideal simulator', 'Noisy simulator'],
+    ['Chance of sampling the best portfolio', f(noise.ideal.p_opt), f(noise.noisy.p_opt)], ['Random guess would get', f(noise.ideal.p_random), f(noise.noisy.p_random)],
+    ['Valid (feasible) samples', f(noise.ideal.feasible_rate), f(noise.noisy.feasible_rate)], ['Approximation ratio', f(noise.ideal.approx_ratio), f(noise.noisy.approx_ratio)],
+    ['Shots', noise.shots.ideal, noise.shots.noisy],
+    ['Reported portfolio', noise.idealPick?.selection.join(' ') ?? 'none', noise.noisyPick?.selection.join(' ') ?? 'none (no valid noisy sample)'],
+    ['Its estimated annual return', f(noise.idealPick ? simpleAnnual(noise.idealPick.exp_return) : null), f(noise.noisyPick ? simpleAnnual(noise.noisyPick.exp_return) : null)],
+    ['Its estimated volatility', f(noise.idealPick?.volatility), f(noise.noisyPick?.volatility)],
+    ['Same stocks as ideal', '', noise.noisyPick ? (noise.noisyPick.same_as_ideal ? 'yes' : 'no') : ''],
+    ['Circuit on the chip', `depth ${noise.transpiled.depth}`, `${noise.transpiled.two_qubit_gates} two-qubit gates`], [],
+  ] : [['Noise analysis'], ['Off for this run'], []];
+  const rows: Row[] = [
+    ['Portfolio report (estimates, not promises; educational tool, not investment advice)'],
+    ['Generated', new Date().toISOString().slice(0, 10)], ['Run', r.run_id], ['Method', s.label], ['Capital (INR)', capital],
+    ['Data source', data.source], ['Data as of', data.as_of], ['Estimation window', estWin], ['Test window (out-of-sample)', testWin], [],
+    ['Holdings'], ['Ticker', 'Name', 'Sector', 'Weight', 'Amount (INR)', 'Est. annual log return', 'Est. volatility', 'Beta', 'Contribution to log return'],
+    ...h.map((x) => [x.ticker, x.name, x.sector, f(x.weight), Math.round(capital * x.weight), f(x.mu), f(x.vol), f(x.beta), f(x.contribution)]), [],
+    ['Metrics'], ['Metric', 'Value'],
+    ['Expected annual log return', f(logRet)], ['Expected annual return (exp(mu)-1)', f(logRet === null ? null : simpleAnnual(logRet))], ['Estimated volatility', f(vol)],
+    ['Sharpe (RF 5.57%)', f(logRet !== null && isNum(vol) ? sharpe(logRet, vol) : null)], ['Modelled transaction cost (fraction of capital)', f(s.txn_cost)],
+    ['Test-year return', f(oos?.ann_return)], ['Test-year volatility', f(oos?.ann_vol)], ['Test-year Sharpe', f(oos?.sharpe)], ['Test-year max drawdown', f(oos?.max_drawdown)],
+    ['NIFTY 50 test-year return', f(nifty?.ann_return)], ['NIFTY 50 test-year volatility', f(nifty?.ann_vol)], ['NIFTY 50 test-year Sharpe', f(nifty?.sharpe)],
+    ['NIFTY 50 test-year max drawdown', f(nifty?.max_drawdown)], [],
+    ['Projection (compounded)'], ['Months', 'Growth', 'Profit/loss (INR)'],
+    ...HORIZONS.map((m) => [m, logRet === null ? null : f(growth(logRet, m)), logRet === null ? null : Math.round(projectedPL(capital, logRet, m))]), [],
+    ['Scenarios (hypothetical; stock move = beta x market move)'], ['Scenario', 'Market move', 'Portfolio return', 'Profit/loss (INR)', 'vs base (INR)', 'NIFTY 50 profit/loss (INR)'],
+    ...runScenarios(h, capital, scenarios).map((x) => [x.scenario.name + (x.scenario.rebound === undefined ? '' : ` (crash ${f(x.scenario.market)} then rebound ${f(x.scenario.rebound)})`),
+      f(x.market), f(x.portfolioReturn), Math.round(x.pl), x.vsBase === null ? null : Math.round(x.vsBase), Math.round(x.niftyPL)]), [],
+    ['Expected vs actual'], ['Portfolio', 'Estimated annual return', 'Realised test-year return', 'Absolute error'],
+    ...expectedVsActual(r).map((x) => [x.label, f(x.estimated), f(x.actual), f(x.absError)]), [],
+    ['Methods'], ['Method', 'Stocks', 'Est. annual return', 'Realised', 'Est. volatility', 'Objective', 'Runtime (s)', 'Valid', 'Approx ratio'],
+    ...r.solvers.map((x) => [x.label, (x.selection ?? []).join(' '), isNum(x.exp_return) ? f(simpleAnnual(x.exp_return)) : null, f(x.oos?.ann_return),
+      f(x.volatility), f(x.objective), f(x.runtime_s), x.feasible ? 'yes' : 'no', f(x.approx_ratio)]), [],
+    ...noiseRows,
+    ['Assumptions'], ['Returns: mean daily log return x252 over the estimation window; weights equal (1/K); stock move = beta x market move (idiosyncratic part 0)'],
+    ['Backtest: buy-and-hold over the test window; no rebalancing, slippage, taxes or separately modelled dividends; one-time buying cost is in the objective but not deducted in the backtest'],
+  ];
+  return toCsv(rows);
+}
+
+/** Saves the report CSV in the browser. Returns false when the run has no valid portfolio to report on. */
+export function downloadReportCsv(r: RunResult, capital?: number, scenarios?: Scenario[]): boolean {
+  const csv = reportCsv(r, capital, scenarios);
+  if (!csv) return false;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `portfolio-report-${r.run_id}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return true;
+}
