@@ -21,6 +21,9 @@ import { FrontierChart } from '../components/FrontierChart';
 import { ConvergenceChart } from '../components/ConvergenceChart';
 import { BitstringHistogram } from '../components/BitstringHistogram';
 import { HonestyPanel } from '../components/HonestyPanel';
+import { StressTest } from '../components/StressTest';
+import { MethodCompare } from '../components/MethodCompare';
+import { HistoricalReplay } from '../components/HistoricalReplay';
 import { OutOfSample } from '../components/OutOfSample';
 import { getSolverStyle } from '../lib/chartColors';
 import { SolverMarker } from '../components/SolverMarker';
@@ -132,6 +135,9 @@ export const Optimise: React.FC<OptimiseProps> = ({
     setSelectedSolverKey(key);
     onSelectSolverChange?.(key);
   };
+
+  // Tell App about the result, so the Stress Test and Portfolio Report pages can use it.
+  useEffect(() => { onRunResultChange?.(runResult); }, [runResult]);
 
   useEffect(() => {
     if (externalRunResult && externalRunResult !== runResult) {
@@ -939,6 +945,14 @@ export const Optimise: React.FC<OptimiseProps> = ({
                     verdict={runResult.verdict}
                     qaoaResult={runResult.qaoa}
                   /></div>
+
+                  {/* Market crash stress tests on the selected portfolio */}
+                  {/* Visual comparison of the four methods */}
+                  <MethodCompare result={runResult} />
+
+                  <StressTest key={selectedSolver.solver} solver={selectedSolver} betas={runResult.betas} />
+
+                  <div data-research><HistoricalReplay result={runResult} /></div>
 
                   {/* Markowitz Efficient Frontier */}
                   <div data-research><FrontierChart

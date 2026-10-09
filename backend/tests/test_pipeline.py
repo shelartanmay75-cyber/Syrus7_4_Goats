@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 import threading
 
+import numpy as np
 import pytest
 
 from qportfolio.contracts import QaoaSettings, RunRequest, RunResult
@@ -38,6 +39,25 @@ def test_small_request_gives_a_complete_valid_result(small_run):
     assert "nifty50" in result.benchmarks and result.data.notes
 
 
+def test_report_assets_and_correlation(small_run):
+    result, _ = small_run
+    assert [a["ticker"] for a in result.assets] == TICKERS  # all 6 fit the cap, so none is screened out
+    assert all(a["name"] and a["sector"] and a["volatility"] > 0 for a in result.assets)
+    best = next(s for s in result.solvers if s.solver == result.recommended)
+    corr = result.correlation
+    assert corr["tickers"] == best.selection
+    m = np.array(corr["matrix"])
+    assert m.shape == (3, 3) and np.allclose(np.diag(m), 1.0) and np.allclose(m, m.T) and np.all(np.abs(m) <= 1.0)
+    cov = np.array(corr["covariance"])  # annualised Sigma of the picked stocks: symmetric, and sqrt(w' S w) is the solver's volatility
+    assert cov.shape == (3, 3) and np.allclose(cov, cov.T) and np.all(np.diag(cov) > 0)
+    assert math.sqrt(cov.sum() / 9) == pytest.approx(best.volatility, abs=1e-5)
+    sd = np.sqrt(np.diag(cov))
+    assert np.allclose(cov / np.outer(sd, sd), m, atol=1e-4)
+    # the report's portfolio return is the mean of the picked stocks' mu, which must match the solver's exp_return
+    mu = {a["ticker"]: a["exp_return"] for a in result.assets}
+    assert np.mean([mu[t] for t in best.selection]) == pytest.approx(best.exp_return, abs=1e-5)
+
+
 def test_progress_never_decreases_and_ends_at_one(small_run):
     _, fractions = small_run
     assert fractions == sorted(fractions)
@@ -48,6 +68,7 @@ def test_all_tickers_are_screened_to_fit_the_cap():  # AE1
     result = run(RunRequest(k=5, qaoa=FAST))
     assert result.screen.applied
     assert result.screen.qubits.total <= 16
+    assert {a["ticker"] for a in result.assets} > set(result.screen.kept)  # the report's assets cover the whole requested universe
     for s in result.solvers:
         if s.selection is not None:
             assert set(s.selection) <= set(result.screen.kept)

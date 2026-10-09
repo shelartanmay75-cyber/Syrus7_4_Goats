@@ -218,13 +218,18 @@ Base path is `/api`. Every response is JSON. An error body looks like `{"detail"
               "headline": "QAOA found a portfolio within 0.8% of the exact optimum.",
               "details": ["It sampled the exact optimum with probability 8.3%, 17x more often than a random guess (0.48%).",
                           "Brute force solved this 10-stock instance exactly in 0.04 s; no speed benefit is claimed at this size."]},
-  "recommended": "brute_force"
+  "recommended": "brute_force",
+  "betas": {"TCS.NS": 0.82, "...": 1.0},
+  "candles": {"brute_force": [{"date": "2025-10-03", "open": 1000000, "high": 1004100, "low": 998200, "close": 1002300}], "nifty50": ["..."]},
+  "assets": [{"ticker": "TCS.NS", "name": "Tata Consultancy Services Ltd.", "sector": "Information Technology", "exp_return": 0.12, "volatility": 0.21}],
+  "correlation": {"tickers": ["TCS.NS", "ITC.NS"], "matrix": [[1.0, 0.18], [0.18, 1.0]], "covariance": [[0.044, 0.007], [0.007, 0.035]]}
 }
 ```
 - **Solver ids:** `brute_force`, `relaxation`, `annealing`, `qaoa_standard`, `qaoa_xy`.
 - **Enums:** `kind` is `classical` or `quantum`; `verdict.level` is `matched`, `near`, `worse` or `no-feasible`. Frontier points are plain dicts (`risk`, `ret`, plus `selection` for discrete).
 - **No feasible sample:** a QAOA solver with no feasible sample has `selection: null`, `bitstring: null`, `feasible: false`, and null numbers, but **still has** `feasible_rate`.
 - **`volatility`:** equals `sqrt(variance)`.
+- **`assets` / `correlation` (portfolio report, optional):** `assets` has one row per stock of the requested universe (a superset of the screened, solved one; the same market the betas use); `exp_return` is the annualised mean log return (mu) and `volatility` is `sqrt(diag(Sigma))`, both from the estimation window only. `correlation` is `{tickers, matrix, covariance}` for the recommended portfolio's stocks: `matrix` = `cov / (sd_i * sd_j)` (diagonal 1, values in [-1, 1]); `covariance` = annualised covariance of daily log returns (x252), the same Sigma the optimiser uses.
 - **`qaoa.noise`:** when noise is on, `{"backend": "FakeGuadalupeV2", "ideal": {metrics}, "noisy": {metrics}, "transpiled": {"depth": int, "two_qubit_gates": int}}`.
 - **`details` per solver:**
   - relaxation: `relaxed_x` and `rounding`;

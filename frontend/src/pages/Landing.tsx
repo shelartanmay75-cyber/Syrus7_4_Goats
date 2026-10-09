@@ -1,5 +1,6 @@
 // Landing page: what the app does, in plain English, with the honest scorecard up front.
 import { Card, Eyebrow } from '../components/ui';
+import landingArt from '../assets/landing-art.txt?raw';
 
 const STEPS = [
   'Choose stocks, your risk level and how many to hold.',
@@ -26,9 +27,10 @@ const btn = 'min-h-[44px] px-6 border font-mono text-xs uppercase tracking-[0.08
 export function Landing({ onStart, onTour }: { onStart: () => void; onTour: () => void }) {
   return (
     <div className="space-y-12 md:space-y-16">
-      <section aria-labelledby="landing-title" className="pt-4 md:pt-10">
+      <section aria-labelledby="landing-title" className="pt-4 md:pt-10 md:grid md:grid-cols-[1.15fr_1fr] md:gap-8 md:items-center">
+        <div>
         <Eyebrow>Qiskit Fall Fest 2026 · PS-03 · NIFTY 50</Eyebrow>
-        <h1 id="landing-title" className="mt-3 max-w-4xl text-5xl md:text-7xl leading-[0.95]">
+        <h1 id="landing-title" className="mt-3 max-w-4xl text-5xl md:text-6xl leading-[0.95]">
           Quantum portfolio picks for NIFTY 50, with an honest scorecard every run.
         </h1>
         <p className="mt-4 max-w-prose text-base text-muted">
@@ -37,6 +39,11 @@ export function Landing({ onStart, onTour }: { onStart: () => void; onTour: () =
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
           <button type="button" onClick={onStart} className={`${btn} border-white bg-white text-black`}>Start optimizing</button>
           <button type="button" onClick={onTour} className={`${btn} border-line-strong text-text hover:border-white`}>Take the 60-second tour</button>
+        </div>
+        </div>
+        {/* Decorative ASCII hero art, drawn as text in the theme colour (see .landing-ascii in index.css) */}
+        <div className="landing-ascii-wrap hidden md:block" aria-hidden="true">
+          <pre className="landing-ascii">{landingArt}</pre>
         </div>
       </section>
 

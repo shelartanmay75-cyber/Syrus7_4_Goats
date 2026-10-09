@@ -58,6 +58,20 @@
 }
 :root.dark { color-scheme: dark; }
 
+/* Landing hero ASCII art: real text in the theme colour, scaled so its 400 columns fill the hero column. */
+.landing-ascii-wrap { container-type: inline-size; overflow: hidden; }
+.landing-ascii {
+  margin: 0;
+  font-family: Consolas, 'Courier New', ui-monospace, monospace;
+  font-size: calc(100cqw / 240);
+  line-height: 1.2;
+  white-space: pre;
+  color: var(--color-text);
+  opacity: 0.8;
+  user-select: none;
+  pointer-events: none;
+}
+
 /* Simple mode hides research detail; Research mode hides the simple-only copies. */
 :root.simple [data-research] { display: none !important; }
 :root:not(.simple) [data-simple-only] { display: none !important; }
@@ -130,9 +144,15 @@ thead th {
   font-variant-numeric: tabular-nums;
 }
 
-/* Square corners everywhere */
-*, *::before, *::after {
-  border-radius: 0 !important;
+/* Soft rounded corners everywhere. In the base layer, so a rounded-* utility (e.g. round dots) still wins. */
+@layer base {
+  *, *::before, *::after {
+    border-radius: 6px;
+  }
+  /* Tailwind's preflight squares form controls with a more specific selector; round them too. */
+  button, input, select, textarea, ::file-selector-button {
+    border-radius: 6px;
+  }
 }
 
 /* Form controls: stronger border, white accent */
@@ -169,4 +189,19 @@ button:disabled { cursor: not-allowed; }
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Portfolio Report: "Print / Save as PDF" prints the report alone, in the white theme. */
+@media print {
+  aside, header, footer, .no-print { display: none !important; }
+  .md\:pl-64 { padding-left: 0 !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  :root.dark {
+    --color-bg: #FFFFFF; --color-surface: #F4F4F4; --color-surface-elevated: #EAEAEA; --color-surface-card: #F0F0F0;
+    --color-line: #BDBDBD; --color-line-strong: #737373; --color-text: #000000; --color-muted: #3D3D3D; --color-faint: #575757;
+    --color-gain: #15803D; --color-loss: #B91C1C; --color-accent-blue: #1D4ED8; --color-accent-blue-hover: #1D4ED8;
+    --c-fg: #000000; --c-bg2: #FFFFFF; --c-surface2: #F4F4F4; --c-grid: #BDBDBD; --c-muted2: #3D3D3D; --c-gain2: #15803D; --c-loss2: #B91C1C;
+    color-scheme: light;
+  }
+  section, figure, tr { break-inside: avoid; }
 }

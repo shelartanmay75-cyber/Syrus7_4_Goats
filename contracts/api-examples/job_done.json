@@ -573,7 +573,11 @@
       "headline": "QAOA matched the exact optimum.",
       "details": ["It sampled the exact optimum with probability 8.3%, 17x more often than a random guess (0.48%).", "Brute force solved this 10-stock instance exactly in 0.04 s; no speed benefit is claimed at this size.", "This is a noiseless simulation on 14 qubits; it says nothing about larger instances."]
     },
-    "recommended": "brute_force"
+    "recommended": "brute_force",
+    "betas": null,
+    "candles": null,
+    "assets": null,
+    "correlation": null
   },
   "error": null
 }

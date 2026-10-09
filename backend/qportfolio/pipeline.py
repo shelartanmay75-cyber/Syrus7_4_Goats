@@ -6,6 +6,55 @@ import uuid
 from collections.abc import Callable
 from dataclasses import asdict
 
+import numpy as np
+import pandas as pd
+
+
+def market_betas(market) -> dict[str, float]:
+    """Beta of each stock to the equal-weight market of `market`, from the estimation-window covariance only."""
+    w = np.full(len(market.tickers), 1.0 / len(market.tickers))
+    cov_with_market = market.sigma @ w
+    return {t: round(float(b), 4) for t, b in zip(market.tickers, cov_with_market / float(w @ cov_with_market))}
+
+
+def weekly_candles(wealth, start: float) -> list[dict]:
+    """Weekly open/high/low/close of a growth path (DatetimeIndex, starts at 1.0), in rupees from `start`."""
+    out, prev = [], start
+    for _, w in (wealth * start).groupby(pd.Grouper(freq="W-FRI")):
+        if w.empty:
+            continue
+        close = float(w.iloc[-1])
+        out.append({"date": w.index[-1].date().isoformat(), "open": round(prev), "high": round(max(prev, float(w.max()))),
+                    "low": round(min(prev, float(w.min()))), "close": round(close)})
+        prev = close
+    return out
+
+
+def test_candles(market, solvers, capital: float) -> dict[str, list[dict]]:
+    """Test-window candles for each feasible portfolio (equal-weight buy-and-hold, as in out_of_sample) and NIFTY 50."""
+    out = {r.solver: weekly_candles((1.0 + market.test_returns[r.selection]).cumprod().mean(axis=1), capital)
+           for r in solvers if r.feasible and r.selection}
+    out["nifty50"] = weekly_candles((1.0 + market.benchmark_test_returns).cumprod(), capital)
+    return out
+
+
+def asset_stats(market) -> list[dict]:
+    """Per stock of the requested universe (the same market the betas use): annualised expected log return and volatility, estimation window only."""
+    names = {a.ticker: a.name for a in load_universe()}
+    vol = np.sqrt(np.diag(market.sigma))
+    return [{"ticker": t, "name": names.get(t, t), "sector": sec, "exp_return": round(float(m), 6), "volatility": round(float(v), 6)}
+            for t, sec, m, v in zip(market.tickers, market.sectors, market.mu, vol)]
+
+
+def selection_correlation(market, selection: list[str]) -> dict:
+    """Correlation (corr = cov / (sd_i * sd_j)) and annualised covariance of the picked stocks, estimation window only."""
+    idx = [market.tickers.index(t) for t in selection]
+    cov = market.sigma[np.ix_(idx, idx)]
+    sd = np.sqrt(np.diag(cov))
+    corr = np.clip(cov / np.outer(sd, sd), -1.0, 1.0)
+    np.fill_diagonal(corr, 1.0)
+    return {"tickers": list(selection), "matrix": np.round(corr, 4).tolist(), "covariance": np.round(cov, 8).tolist()}
+
 
 class Cancelled(Exception):
     """Defined before the heavier imports: quantum/qaoa.py imports it from this module."""
@@ -27,6 +76,7 @@ from .data import (  # noqa: E402
     benchmark_oos,
     build_market,
     linear_costs,
+    load_universe,
     out_of_sample,
     prescreen,
     to_shares,
@@ -97,7 +147,8 @@ def run(request: RunRequest, on_progress: Callable[[float, str, dict | None], No
             solvers[i] = r.model_copy(update={"portfolio": portfolio, "oos": oos})
 
     # Recommend the feasible solver with the lowest objective; ties go to the earlier (exact) solver.
-    recommended = min((r for r in solvers if r.feasible), key=lambda r: r.objective).solver
+    best = min((r for r in solvers if r.feasible), key=lambda r: r.objective)
+    recommended = best.solver
     w = full.windows
     result = RunResult(
         run_id=uuid.uuid4().hex[:6],
@@ -116,6 +167,10 @@ def run(request: RunRequest, on_progress: Callable[[float, str, dict | None], No
         benchmarks={"nifty50": OOS(**asdict(benchmark_oos(market)))},
         verdict=verdict(solvers, landscape, qaoa.metrics),
         recommended=recommended,
+        betas=market_betas(full),
+        candles=test_candles(market, solvers, request.capital),
+        assets=asset_stats(full),
+        correlation=selection_correlation(market, best.selection),
     )
     step(1.0, "Done")
     return result

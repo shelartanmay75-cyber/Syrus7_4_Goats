@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Optimise } from './pages/Optimise';
 import { StressTest } from './pages/StressTest';
+import { Report } from './pages/Report';
 import { Evidence } from './pages/Evidence';
 import { Method } from './pages/Method';
 import { GlossaryPage } from './pages/GlossaryPage';
@@ -11,7 +12,7 @@ import { Landing } from './pages/Landing';
 import { Tour } from './components/tour/Tour';
 import { TOUR_DONE_KEY } from './components/tour/tourSteps';
 
-type Tab = 'optimise' | 'stress' | 'method' | 'evidence' | 'glossary';
+type Tab = 'optimise' | 'stress' | 'report' | 'method' | 'evidence' | 'glossary';
 
 interface NavItem {
   id: Tab;
@@ -52,8 +53,20 @@ export const App: React.FC = () => {
     </div>
   );
   const themeButton = (
-    <button type="button" onClick={() => setDark(!dark)} aria-pressed={dark} className="inline-flex items-center px-2 py-0.5 border border-line-strong text-[13px] font-mono uppercase text-muted hover:text-text">
-      {dark ? 'White mode' : 'Black mode'}
+    <button type="button" onClick={() => setDark(!dark)} aria-label={dark ? 'Switch to white mode' : 'Switch to black mode'} title={dark ? 'White mode' : 'Black mode'}
+      className="inline-flex items-center justify-center w-9 h-9 border border-line-strong text-muted hover:text-text">
+      {dark ? (
+        // Sun: switch to white mode
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path strokeLinecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" />
+        </svg>
+      ) : (
+        // Crescent moon: switch to black mode
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      )}
     </button>
   );
 
@@ -106,6 +119,22 @@ export const App: React.FC = () => {
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      )
+    },
+    {
+      id: 'report',
+      label: 'Portfolio Report',
+      sublabel: 'Returns, Risk & Backtest',
+      icon: (active) => (
+        <svg
+          className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-accent-blue-hover' : 'text-muted'}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
         </svg>
       )
     },
@@ -178,7 +207,7 @@ export const App: React.FC = () => {
     <>
     {home && (
       <div className="min-h-screen bg-bg text-text px-4 sm:px-6 py-10">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="flex justify-end gap-2 mb-4">{modeButton}{themeButton}</div>
           <Landing onStart={() => start(false)} onTour={() => start(true)} />
         </div>
@@ -354,6 +383,7 @@ export const App: React.FC = () => {
               <span className="text-sm font-medium tracking-wider text-text uppercase">
                 {activeTab === 'optimise' && 'Portfolio Optimisation & Solvers'}
                 {activeTab === 'stress' && 'Market Crash Stress Testing & Resilience'}
+                {activeTab === 'report' && 'Portfolio Report'}
                 {activeTab === 'method' && 'Methodology & QUBO Specification'}
                 {activeTab === 'evidence' && 'Empirical Quantum Benchmarks'}
                 {activeTab === 'glossary' && 'Quantum & Quantitative Lexicon'}
@@ -400,6 +430,9 @@ export const App: React.FC = () => {
               initialSolverKey={selectedSolverKey}
               onNavigateToOptimise={() => handleTabChange('optimise')}
             />
+          </div>
+          <div hidden={activeTab !== 'report'}>
+            <Report runResult={runResult} onNavigateToOptimise={() => handleTabChange('optimise')} />
           </div>
           {activeTab === 'method' && <Method />}
           {activeTab === 'evidence' && <Evidence />}

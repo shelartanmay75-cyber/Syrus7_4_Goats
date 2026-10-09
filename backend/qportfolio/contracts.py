@@ -229,6 +229,12 @@ class RunResult(BaseModel):
     benchmarks: dict[str, OOS]
     verdict: Verdict
     recommended: SolverId
+    betas: dict[str, float] | None = None  # stress tests: beta to the equal-weight market of the requested universe, estimation window only
+    candles: dict[str, list[dict]] | None = None  # weekly OHLC of each portfolio's rupee value over the test window, plus nifty50
+    # Portfolio report, estimation window only. assets: every stock of the requested universe (a superset of the solved one), as
+    # {ticker, name, sector, exp_return, volatility}. correlation: {tickers, matrix, covariance} for the recommended portfolio.
+    assets: list[dict] | None = None
+    correlation: dict[str, Any] | None = None
 
 
 # --- 2.5 JobStatus ----------------------------------------------------------
