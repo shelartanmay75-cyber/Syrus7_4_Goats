@@ -12,7 +12,8 @@ import * as R from '../lib/report';
 
 const AXIS = { stroke: 'var(--c-muted2)', fontSize: 13 };
 const TIP = { background: 'var(--color-surface)', border: '1px solid var(--color-line-strong)', fontSize: 13 };
-const axisINR = (v: number) => (v >= 1e7 ? `₹${(v / 1e7).toFixed(1)}Cr` : v >= 1e5 ? `₹${(v / 1e5).toFixed(1)}L` : `₹${Math.round(v / 1e3)}k`);
+const axisINR = (v: number) => (v >= 1e7 ? `₹${(v / 1e7).toFixed(2)}Cr` : v >= 1e5 ? `₹${(v / 1e5).toFixed(2)}L` : v >= 1e4 ? `₹${(v / 1e3).toFixed(1)}k` : formatINR(v));
+const DASHES = ['', '8 4', '2 3', '12 4 2 4', '4 4'];
 const signed = (x: number) => `${x > 0 ? '+' : x < 0 ? '−' : ''}${formatINR(Math.abs(x))}`;
 const fix2 = (x: number | null | undefined) => (isNum(x) ? x.toFixed(2).replace('-', '−') : '—');
 const corrFormat = (v: number) => `${v < 0 ? '−' : ''}${Math.abs(v).toFixed(2)}`;
@@ -107,6 +108,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
   const buyCost = isNum(s.txn_cost) ? s.txn_cost : null;
   const estWin = `${data.est_window[0]} to ${data.est_window[1]}`, testWin = `${data.test_window[0]} to ${data.test_window[1]}`;
   const conc = R.concentration(h);
+  const methods = R.methodBacktest(result, capital / request.capital);
   const past = R.pastLogReturn(result, s), shrunk = R.shrunkLogReturn(result, s), capm = R.capmReturn(h), est = result.estimator;
   const beta = h.every((x) => x.beta !== null) ? h.reduce((t, x) => t + x.weight * (x.beta as number), 0) : null;
 
@@ -436,7 +438,54 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
       </Part>
 
       {/* G. Quantum vs classical */}
-      <Part id="rp-g" letter="G · Methods" title="Quantum vs classical" research lead="Every method solved the same problem. Here is what each one picked and how it did.">
+      <Part id="rp-g" letter="G · Methods" title="Quantum vs classical" lead="Every method solved the same problem. Here is what each one picked and how it did.">
+        {methods && (
+          <div className="space-y-3 mb-6">
+            <h4 className="text-text">The unseen year, method by method</h4>
+            <p className="text-sm text-muted">What {formatINR(capital)} in each method's portfolio did from {testWin}, a period none of them saw. Methods that picked the same stocks draw the same line.</p>
+            <div className="overflow-x-auto">
+              <table className={tableCls}>
+                <thead>
+                  <tr className="text-left"><th className="py-1 pr-2">Test year</th>{[...methods.lines, ...(methods.nifty ? [methods.nifty] : [])].map((x) => <th key={x.id} className="py-1 pr-2 text-right">{x.label}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {([
+                    ['Return (annualised)', (x: R.MethodLine) => <Delta x={x.ret} />],
+                    ['Value of your capital at the end', (x: R.MethodLine) => (x.endValue === null ? '—' : formatINR(x.endValue))],
+                    ['Volatility', (x: R.MethodLine) => formatPct(x.vol)],
+                    ['Sharpe ratio', (x: R.MethodLine) => fix2(x.sharpe)],
+                    ['Max drawdown', (x: R.MethodLine) => (isNum(x.maxDrawdown) ? <span className="text-loss">▼ {formatPct(Math.abs(x.maxDrawdown))}</span> : '—')],
+                  ] as [string, (x: R.MethodLine) => ReactNode][]).map(([label, cell]) => (
+                    <tr key={label} className="border-t border-line">
+                      <td className="py-1 pr-2">{label}</td>
+                      {[...methods.lines, ...(methods.nifty ? [methods.nifty] : [])].map((x) => <td key={x.id} className="py-1 pr-2 text-right tabular-nums">{cell(x)}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="h-72" role="img" aria-label="Value of each method's portfolio and of the NIFTY 50 over the test year">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={methods.rows} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="var(--c-grid)" />
+                  <XAxis dataKey="date" tick={AXIS} stroke="var(--c-grid)" minTickGap={40} tickFormatter={(d: string) => (d === 'start' ? 'start' : d.slice(0, 7))} />
+                  <YAxis tick={AXIS} stroke="var(--c-grid)" width={72} domain={['auto', 'auto']} tickFormatter={axisINR} />
+                  <Tooltip contentStyle={TIP} formatter={(v: unknown) => formatINR(Number(v))} />
+                  <Legend wrapperStyle={{ fontSize: 13 }} />
+                  {methods.lines.map((x, i) => (
+                    <Line key={x.id} name={x.label} dataKey={x.id} stroke="var(--c-fg)" strokeDasharray={DASHES[i % DASHES.length]} dot={false} isAnimationActive={false} strokeWidth={x.id.startsWith('qaoa') ? 2.5 : 1.5} />
+                  ))}
+                  {methods.nifty && <Line name="NIFTY 50" dataKey="nifty50" stroke="var(--color-accent-blue)" strokeDasharray="6 3" dot={false} isAnimationActive={false} strokeWidth={2} connectNulls />}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {methods.lines.some((x) => x.sameAs) && (
+              <p className="text-sm text-muted">Same stocks: {methods.lines.filter((x) => x.sameAs).map((x) => `${x.label} picked the same portfolio as ${x.sameAs}`).join('; ')}.</p>
+            )}
+            <p className="text-sm text-muted">One year is one sample. A method that did better here is not shown to be better in general, and every method solved the same problem with the same estimates.</p>
+          </div>
+        )}
+        <div data-research>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
@@ -470,6 +519,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
         <Calc>
           <p>Estimated annual return = exp(μ<sub>p</sub>) − 1 (estimation window). Realised = annualised return over the test window. Objective = risk aversion × variance − (1 − risk aversion) × (return − trading cost); lower is better. Valid means every constraint holds, judged by the same function for every method. A method with no valid sample reports no portfolio rather than a repaired one.</p>
         </Calc>
+        </div>
       </Part>
 
       {/* H. Noise analysis */}

@@ -217,6 +217,41 @@ export function backtestRows(p: Candle[], n: Candle[] | undefined, scale: number
   });
 }
 
+// ---- Backtest, method by method ---------------------------------------------------------------------------------------
+
+export interface MethodLine { id: string; label: string; sameAs: string | null; ret: number | null; vol: number | null; sharpe: number | null; maxDrawdown: number | null; endValue: number | null }
+/** Every valid method's portfolio value through the test window (plus NIFTY 50), in rupees of `scale` x the run's capital. */
+export function methodBacktest(r: RunResult, scale: number): { rows: Record<string, number | string | null>[]; lines: MethodLine[]; nifty: MethodLine | null } | null {
+  const c = r.candles;
+  const solvers = r.solvers.filter((s) => s.feasible && s.selection && c?.[s.solver]?.length);
+  if (!c || !solvers.length) return null;
+  const key = (sel: string[] | null) => [...(sel ?? [])].sort().join(',');
+  const end = (k: Candle[]) => (k.length ? k[k.length - 1].close * scale : null);
+  const lines: MethodLine[] = solvers.map((s, i) => ({
+    id: s.solver, label: s.label,
+    sameAs: solvers.slice(0, i).find((p) => key(p.selection) === key(s.selection))?.label ?? null,
+    ret: s.oos?.ann_return ?? null, vol: s.oos?.ann_vol ?? null, sharpe: s.oos?.sharpe ?? null, maxDrawdown: s.oos?.max_drawdown ?? null,
+    endValue: end(c[s.solver]),
+  }));
+  const n = c.nifty50 ?? [];
+  const b = r.benchmarks.nifty50;
+  const nifty: MethodLine | null = n.length
+    ? { id: 'nifty50', label: 'NIFTY 50', sameAs: null, ret: b?.ann_return ?? null, vol: b?.ann_vol ?? null, sharpe: b?.sharpe ?? null, maxDrawdown: b?.max_drawdown ?? null, endValue: end(n) }
+    : null;
+  const base = c[solvers[0].solver];
+  const paths = Object.fromEntries(solvers.map((s) => [s.solver, valuePath(c[s.solver], scale)]));
+  const nv = valuePath(n, scale);
+  const nByDate = new Map(n.map((k, i) => [k.date, i + 1]));
+  const rows = ['start', ...base.map((k) => k.date)].map((date, i) => {
+    const row: Record<string, number | string | null> = { date };
+    for (const s of solvers) row[s.solver] = paths[s.solver][i] ?? null;
+    const j = i === 0 ? 0 : nByDate.get(date) ?? -1;
+    row.nifty50 = nv.length && j >= 0 ? nv[j] : null;
+    return row;
+  });
+  return { rows, lines, nifty };
+}
+
 // ---- Expected vs actual ------------------------------------------------------------------------------------------------
 
 export interface ExpVsActual { id: string; label: string; estimated: number | null; actual: number | null; absError: number | null }
@@ -331,6 +366,13 @@ export function reportCsv(r: RunResult, capital = r.request.capital, scenarios =
     ['Methods'], ['Method', 'Stocks', 'Est. annual return', 'Realised', 'Est. volatility', 'Objective', 'Runtime (s)', 'Valid', 'Approx ratio'],
     ...r.solvers.map((x) => [x.label, (x.selection ?? []).join(' '), isNum(x.exp_return) ? f(simpleAnnual(x.exp_return)) : null, f(x.oos?.ann_return),
       f(x.volatility), f(x.objective), f(x.runtime_s), x.feasible ? 'yes' : 'no', f(x.approx_ratio)]), [],
+    ...(() => {
+      const mb = methodBacktest(r, capital / r.request.capital);
+      if (!mb) return [];
+      const all = [...mb.lines, ...(mb.nifty ? [mb.nifty] : [])];
+      return [['Test year by method (unseen data)'], ['Portfolio', 'Return (annualised)', 'Value at the end (INR)', 'Volatility', 'Sharpe', 'Max drawdown', 'Same stocks as'],
+        ...all.map((x) => [x.label, f(x.ret), x.endValue === null ? null : Math.round(x.endValue), f(x.vol), f(x.sharpe), f(x.maxDrawdown), x.sameAs ?? '']), []] as Row[];
+    })(),
     ...noiseRows,
     ['Assumptions'], ['Returns: mean daily log return x252 over the estimation window; weights equal (1/K); stock move = beta x market move (idiosyncratic part 0)'],
     ['Backtest: buy-and-hold over the test window; no rebalancing, slippage, taxes or separately modelled dividends; one-time buying cost is in the objective but not deducted in the backtest'],

@@ -53,7 +53,7 @@ export const Evidence: React.FC = () => {
           Portfolio-Pulse — Empirical Quantum Evidence &amp; Benchmark Studies
         </h1>
         <p className="text-xs text-muted leading-relaxed">
-          Systematic benchmark study runs evaluating QAOA circuit depth (p), classical optimizer convergence, parameter initialization (warm-start interp), XY ring mixers, physical hardware noise simulation, and the classical baselines solving the same problems.
+          Systematic benchmark study runs evaluating QAOA circuit depth (p), classical optimizer convergence, parameter initialization (warm-start interp), XY ring mixers, and physical hardware noise simulation, plus how the classical baselines work.
         </p>
       </div>
 
@@ -151,7 +151,7 @@ export const Evidence: React.FC = () => {
           ))}
         </div>
         <p className="text-xs text-muted">
-          On the 5 test problems in the "Classical baselines vs QAOA" study (10 stocks, pick 5: 252 possible portfolios), all four methods found the exact optimum; brute force took about 0.005 s and QAOA about 4.6 s on a simulator. At this size the problem is easy for every method, so the study shows that QAOA works, not that it is faster or better.
+          On the 5 test problems used by the studies above (10 stocks, pick 5: 252 possible portfolios), all four methods found the exact optimum; brute force took about 0.005 s and QAOA about 4.6 s on a simulator. At this size the problem is easy for every method, so the study shows that QAOA works, not that it is faster or better.
         </p>
       </section>
     </div>
