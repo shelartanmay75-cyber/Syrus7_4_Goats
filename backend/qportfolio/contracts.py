@@ -50,6 +50,8 @@ class RunRequest(BaseModel):
     holdings: dict[str, int] = {}  # ticker -> share count
     qubit_cap: int = 12  # 16 allowed (FakeGuadalupeV2 size) but ~3 min per live run; 12 keeps it under a minute
     qaoa: QaoaSettings = QaoaSettings()
+    # How expected returns are estimated: CAPM from market sensitivity (default), Bayes-Stein shrunk past average, or raw.
+    mu_estimator: Literal["capm", "bayes_stein", "raw"] = "capm"
 
 
 # --- 2.3 Sample, 2.4 ScreenInfo --------------------------------------------
@@ -244,8 +246,9 @@ class RunResult(BaseModel):
     candles: dict[str, list[dict]] | None = None  # weekly OHLC of each portfolio's rupee value over the test window, plus nifty50
     # Portfolio report, estimation window only. assets: every stock of the requested universe (a superset of the solved one), as
     # {ticker, name, sector, exp_return, volatility}. correlation: {tickers, matrix, covariance} for the recommended portfolio.
-    assets: list[dict] | None = None
+    assets: list[dict] | None = None  # each also carries past_return (raw) and shrunk_return (Bayes-Stein), annual log
     correlation: dict[str, Any] | None = None
+    estimator: dict[str, Any] | None = None  # {method, shrinkage, target, market_return, risk_free}
 
 
 # --- 2.5 JobStatus ----------------------------------------------------------

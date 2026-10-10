@@ -152,6 +152,7 @@ Base path is `/api`. Every response is JSON. An error body looks like `{"detail"
 - `optimizer`: `COBYLA`, `SPSA` or `NELDER_MEAD`.
 - `init`: `random`, `ramp` or `interp`.
 - `qubit_cap`: default 12 (a live run takes under a minute); max 16, the FakeGuadalupeV2 size (about 3 min per run).
+- `mu_estimator`: `"capm"` (default), `"bayes_stein"` or `"raw"`. CAPM = risk-free + beta × (12% assumed long-run market − risk-free), from market sensitivity only; it was the most accurate of the three per stock on a validation year inside the estimation data. Bayes-Stein (Jorion 1986) shrinks each past average toward the minimum-variance portfolio's mean. The result's `estimator` block records the method and its parameters; each `assets` row keeps `past_return` (raw) and `shrunk_return` (Bayes-Stein).
 - Validation: 2 ≤ k ≤ 15, 0 ≤ risk_aversion ≤ 1, 1 ≤ reps ≤ 5, 256 ≤ shots ≤ 20000.
 
 ### 2.3 Sample (inside results)
@@ -220,6 +221,7 @@ Base path is `/api`. Every response is JSON. An error body looks like `{"detail"
                           "Brute force solved this 10-stock instance exactly in 0.04 s; no speed benefit is claimed at this size."]},
   "recommended": "brute_force",
   "betas": {"TCS.NS": 0.82, "...": 1.0},
+  "estimator": {"method": "capm", "shrinkage": 0.6, "target": 0.056, "market_return": 0.12, "risk_free": 0.0557},
   "candles": {"brute_force": [{"date": "2025-10-03", "open": 1000000, "high": 1004100, "low": 998200, "close": 1002300}], "nifty50": ["..."]},
   "assets": [{"ticker": "TCS.NS", "name": "Tata Consultancy Services Ltd.", "sector": "Information Technology", "exp_return": 0.12, "volatility": 0.21}],
   "correlation": {"tickers": ["TCS.NS", "ITC.NS"], "matrix": [[1.0, 0.18], [0.18, 1.0]], "covariance": [[0.044, 0.007], [0.007, 0.035]]}

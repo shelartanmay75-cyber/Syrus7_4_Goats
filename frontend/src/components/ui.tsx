@@ -24,12 +24,12 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 }
 
 /** A metric with a big tabular number and a one-line plain explanation. */
-export function Stat({ label, value, hint, tone = 'text-text' }: {
-  label: string; value: ReactNode; hint?: ReactNode; tone?: string;
+export function Stat({ label, value, hint, help, tone = 'text-text' }: {
+  label: string; value: ReactNode; hint?: ReactNode; help?: ReactNode; tone?: string;
 }) {
   return (
     <div className="p-4 border border-line bg-surface min-w-0">
-      <Eyebrow>{label}</Eyebrow>
+      <div className="flex items-start justify-between gap-2"><Eyebrow>{label}</Eyebrow>{help && <InfoTip label={label}>{help}</InfoTip>}</div>
       <p className={`mt-1 text-2xl md:text-3xl font-medium tabular-nums ${tone}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted leading-snug">{hint}</p>}
     </div>

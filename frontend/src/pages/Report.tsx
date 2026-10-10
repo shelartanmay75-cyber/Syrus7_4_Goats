@@ -4,7 +4,9 @@ import { useState, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { RunResult } from '../api/types';
 import { Heatmap, pctFormat } from '../components/Heatmap';
-import { Section, Stat } from '../components/ui';
+import { InfoTip, Section, Stat } from '../components/ui';
+import { Tour } from '../components/tour/Tour';
+import { REPORT_TOUR_STEPS } from '../components/tour/tourSteps';
 import { formatINR, formatPct, isNum, trend } from '../lib/format';
 import * as R from '../lib/report';
 
@@ -69,10 +71,19 @@ export function Report({ runResult, onNavigateToOptimise }: { runResult: RunResu
   return <ReportBody key={runResult.run_id} result={runResult} onNavigateToOptimise={onNavigateToOptimise} />;
 }
 
+const SCENARIO_HELP: Record<string, string> = {
+  base: 'The market moves by its own expected yearly return (the average of all offered stocks), and each stock moves by its beta times that.',
+  bull: 'A good year: the market rises 15%. A stock with beta 1.5 rises about 22.5%.',
+  bear: 'A bad year: the market falls 15%. A stock with beta 1.5 falls about 22.5%.',
+  crash: 'A severe fall: the market drops 30%, like a crash year. High-beta stocks fall the most.',
+  recovery: 'A 30% crash followed by a 25% rebound: the market still ends about 12.5% down, because a fall needs a bigger rise to recover.',
+};
+
 function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNavigateToOptimise?: () => void }) {
   const [capitalText, setCapitalText] = useState(String(result.request.capital));
   const [months, setMonths] = useState<number>(12);
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [guide, setGuide] = useState(false);
   const s = R.reportSolver(result);
   if (!s) {
     return (
@@ -96,6 +107,8 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
   const buyCost = isNum(s.txn_cost) ? s.txn_cost : null;
   const estWin = `${data.est_window[0]} to ${data.est_window[1]}`, testWin = `${data.test_window[0]} to ${data.test_window[1]}`;
   const conc = R.concentration(h);
+  const past = R.pastLogReturn(result, s), shrunk = R.shrunkLogReturn(result, s), capm = R.capmReturn(h), est = result.estimator;
+  const beta = h.every((x) => x.beta !== null) ? h.reduce((t, x) => t + x.weight * (x.beta as number), 0) : null;
 
   // Backtest series, re-based to the capital typed above (the candles are in rupees of request.capital).
   const pCandles = result.candles?.[s.solver], nCandles = result.candles?.nifty50;
@@ -137,6 +150,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
           <p className="text-sm text-muted">Run {result.run_id} · {s.label} · data as of {data.as_of}</p>
         </div>
         <div className="flex gap-2">
+          <button type="button" onClick={() => setGuide(true)} className="px-3 py-2 text-xs font-mono uppercase bg-accent-blue text-[#fff]">Guide</button>
           <button type="button" onClick={download} className="px-3 py-2 text-xs font-mono uppercase border border-accent-blue text-accent-blue-hover">Download CSV</button>
           <button type="button" onClick={() => window.print()} className="px-3 py-2 text-xs font-mono uppercase border border-accent-blue text-accent-blue-hover">Print / Save as PDF</button>
         </div>
@@ -172,17 +186,22 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
           {request.target_return !== null ? `, at least ${formatPct(request.target_return)} net return` : ''}; risk aversion {request.risk_aversion}). Equal weights; whole-share rounding is ignored here.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Stat label="Expected annual return" value={annual === null ? '—' : <Delta x={annual} />} hint="What past prices imply the stocks earn in a year if that pattern repeats. An estimate." />
+          <Stat label="Expected annual return" help={"The yearly growth the optimiser assumed when it picked these stocks. It comes from market sensitivity (beta): stocks that swing more with the market are expected to earn a bit more over the long run. It is an estimate, not a promise."} value={annual === null ? '—' : <Delta x={annual} />} hint={est?.method === 'capm' ? `From market sensitivity (CAPM, beta ${beta?.toFixed(2)}), not past returns. It was the most accurate of three methods on a validation year before the test period. An estimate, not a promise.` : est?.method === 'bayes_stein' ? `Past returns pulled ${formatPct(est.shrinkage, { digits: 0 })} toward a common average (Bayes-Stein), because raw past averages overstate recent winners. An estimate, not a promise.` : 'What past prices imply the stocks earn in a year if that pattern repeats. An estimate.'} />
+          {est?.method === 'capm' && shrunk !== null && <Stat label="Recent-history estimate" help={"The stocks' own past returns, pulled toward the average stock. Shown only for comparison: past returns predicted the next year poorly in our checks."} value={<Delta x={R.simpleAnnual(shrunk)} />} hint={`Past returns pulled ${formatPct(est.shrinkage, { digits: 0 })} toward a common average (Bayes-Stein). Shown for comparison; on the validation year it was far less accurate than the market-based estimate.`} />}
+          {past !== null && <Stat label="Past performance (not a forecast)" help={"What these exact stocks earned per year in the data the optimiser learned from. They were picked partly because of this, so it is the most optimistic number on the page."} value={<Delta x={R.simpleAnnual(past)} />} hint={`What these stocks actually did per year in ${estWin}. The optimiser picked them partly because of this, so it overstates the future.`} />}
+          {capm !== null && est?.method !== 'capm' && <Stat label="Market-model view (CAPM)" value={<Delta x={capm} />} hint={`5.57% risk-free + beta ${beta?.toFixed(2)} × (${R.LONG_RUN_MARKET * 100}% assumed long-run market − 5.57%). Uses market sensitivity only, not past returns: the most conservative view.`} />}
           <Stat label="Estimated 12-month profit/loss" value={logRet === null ? '—' : <Money x={R.projectedPL(capital, logRet, 12)} />} hint="The expected annual return applied to your capital." />
-          <Stat label="Volatility (estimated)" value={formatPct(vol)} hint="How much the value typically swings over a year (one standard deviation)." />
-          <Stat label="Sharpe ratio (estimated)" value={fix2(sharpe)} hint="Return above the 5.57% risk-free rate for each unit of volatility. Higher is better." />
-          <Stat label="Test-year return (actual)" value={<Delta x={oos?.ann_return} />} hint={`What these stocks really did, ${testWin}. Not seen by the optimiser.`} />
+          <Stat label="Volatility (estimated)" help={"How much the value usually moves in a year. 20% means a typical year lands within about 20% above or below the expected path."} value={formatPct(vol)} hint="How much the value typically swings over a year (one standard deviation)." />
+          <Stat label="Sharpe ratio (estimated)" help={"Extra return over a risk-free bank rate (5.57%) for each unit of risk taken. Above 1 is good; below 0 means a deposit would have been better."} value={fix2(sharpe)} hint="Return above the 5.57% risk-free rate for each unit of volatility. Higher is better." />
+          <Stat label="Test-year return (actual)" help={"The real result over a year the optimiser never saw. This is the honest check on every estimate above."} value={<Delta x={oos?.ann_return} />} hint={`What these stocks really did, ${testWin}. Not seen by the optimiser.`} />
           <Stat label="NIFTY 50 test-year return" value={<Delta x={nifty?.ann_return} />} hint="The index over the same dates, for comparison." />
           <Stat label="Max drawdown, test year" value={<span className="text-loss">▼ {formatPct(Math.abs(oos?.max_drawdown ?? NaN))}</span>} hint="The biggest fall from a peak to a later low, in the test year." />
           <Stat label="Modelled trading cost" value={buyCost === null ? '—' : formatINR(buyCost * capital)} hint="Brokerage and charges for buying once. It is in the objective, not in the backtest." />
         </div>
         <Calc>
           <p>Expected annual return: the average of each stock's estimated annual <em>log</em> return (the mean of daily log returns × 252 over the estimation window, {estWin}), weighted equally, converted with exp(μ) − 1. Log returns add up over time, which is why they are used to compound. The Optimise page shows μ itself (the log return); this page converts it to a plain percentage, which is larger when the return is positive.</p>
+          {est?.method === 'capm' && <p>Expected return (CAPM) = 5.57% risk-free + beta × (12% assumed long-run market return − 5.57%), with beta measured against the equal-weight average of the offered stocks over the estimation window. Past returns are not used. We chose it on a validation year inside the estimation data (2023-10 to 2024-09 estimated, 2024-10 to 2025-09 checked), where it missed each stock by 19.8 points on average against 43.9 for Bayes-Stein and 62.7 for the raw past average; the test year was not used to choose.</p>}
+          {est && est.method !== 'raw' && <p>Bayes-Stein shrinkage (Jorion, 1986): μ = (1 − w) × past average + w × target, where the target is the return of the minimum-variance portfolio and the data sets w ({formatPct(est.shrinkage, { digits: 0 })} for this run). A plain past average rewards whatever just ran up, and an optimiser then picks exactly those stocks; shrinking removes most of that bias. It uses the estimation window only.</p>}
           <p>Estimated profit/loss = capital × (exp(μ × months/12) − 1). Volatility = √(wᵀΣw) with Σ the annualised covariance of daily log returns. Sharpe = (exp(μ) − 1 − 5.57%) ÷ volatility.</p>
           <p>Test-year figures come from the real prices in {testWin}: equal-weight buy-and-hold, no trading after the first day. Max drawdown is the largest peak-to-trough fall of the daily value.</p>
         </Calc>
@@ -212,7 +231,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
             </tbody>
           </table>
         </div>
-        <p className="text-sm text-muted mt-1">Each stock's estimate is just its own past average, so a stock that did well in the estimation window looks good here. That is the model, not a forecast.</p>
+        <p className="text-sm text-muted mt-1">{est?.method === 'capm' ? "Each stock's estimate comes from how much it moves with the market (beta), not from its past returns: 5.57% + beta × (12% assumed long-run market − 5.57%). Past returns are left out because they overstate whatever just ran up." : est?.method === 'bayes_stein' ? "Each stock's estimate is its past average pulled toward a common average (Bayes-Stein), because raw past averages overstate recent winners. It is a model, not a forecast." : "Each stock's estimate is just its own past average, so a stock that did well in the estimation window looks good here. That is the model, not a forecast."}</p>
 
         <div className="mt-5" role="group" aria-label="Horizon">
           <p className="text-sm text-text mb-2">Look ahead by</p>
@@ -281,7 +300,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
                 );
                 return (
                   <tr key={sc.id} className="border-t border-line align-top">
-                    <td className="py-1.5 pr-2 text-text">{sc.name}</td>
+                    <td className="py-1.5 pr-2 text-text"><span className="inline-flex items-center gap-1">{sc.name}<InfoTip label={sc.name}>{SCENARIO_HELP[sc.id]}</InfoTip></span></td>
                     <td className="py-1.5 pr-2 space-x-3">{inp('market', sc.rebound === undefined ? '' : 'crash')}{sc.rebound !== undefined && <>{inp('rebound', 'then')}<span className="text-muted">net <Delta x={x.market} /></span></>}</td>
                     <td className="py-1.5 pr-2 text-right"><Delta x={x.portfolioReturn} /></td>
                     <td className="py-1.5 pr-2 text-right"><Money x={x.pl} /></td>
@@ -601,7 +620,8 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
         <p className="text-sm text-text mt-3">Educational tool, not investment advice.</p>
       </Part>
 
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+      <Tour open={guide} onClose={() => setGuide(false)} steps={REPORT_TOUR_STEPS} />
+      <div id="report-export" className="no-print flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <p className="text-sm text-muted">Take the whole report with you: every table above, with the assumptions, in one file.</p>
         <div className="flex gap-2">
           <button type="button" onClick={download} className="px-4 py-2 text-xs font-mono uppercase bg-accent-blue text-[#fff]">Download CSV</button>

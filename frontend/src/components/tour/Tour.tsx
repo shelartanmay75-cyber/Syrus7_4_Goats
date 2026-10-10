@@ -7,11 +7,10 @@ const PAD = 8;
 const MARGIN = 16;
 const CARD_W = 340;
 const find = (target: string) =>
-  [...document.querySelectorAll<HTMLElement>(`[data-tour="${target}"]`)].find((el) => el.offsetParent !== null) ?? null;
+  [...document.querySelectorAll<HTMLElement>(`[data-tour="${target}"], [id="${target}"]`)].find((el) => el.offsetParent !== null) ?? null;
 const btn = 'min-h-[44px] px-4 border font-mono text-xs uppercase tracking-[0.08em] disabled:opacity-40';
 
-export function Tour({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const steps = TOUR_STEPS;
+export function Tour({ open, onClose, steps = TOUR_STEPS }: { open: boolean; onClose: () => void; steps?: typeof TOUR_STEPS }) {
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [cardH, setCardH] = useState(240);

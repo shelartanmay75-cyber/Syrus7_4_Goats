@@ -7,5 +7,6 @@
   "capital": 1000000,
   "holdings": {},
   "qubit_cap": 12,
-  "qaoa": {"variant": "standard", "reps": 2, "optimizer": "COBYLA", "init": "ramp", "shots": 4096, "maxiter": 150, "noise": false, "seed": 7}
+  "qaoa": {"variant": "standard", "reps": 2, "optimizer": "COBYLA", "init": "ramp", "shots": 4096, "maxiter": 150, "noise": false, "seed": 7},
+  "mu_estimator": "capm"
 }

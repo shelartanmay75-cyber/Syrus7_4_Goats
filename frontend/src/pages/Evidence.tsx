@@ -53,7 +53,7 @@ export const Evidence: React.FC = () => {
           Portfolio-Pulse — Empirical Quantum Evidence &amp; Benchmark Studies
         </h1>
         <p className="text-xs text-muted leading-relaxed">
-          Systematic benchmark study runs evaluating QAOA circuit depth (p), classical optimizer convergence, parameter initialization (warm-start interp), XY ring mixers, and physical hardware noise simulation.
+          Systematic benchmark study runs evaluating QAOA circuit depth (p), classical optimizer convergence, parameter initialization (warm-start interp), XY ring mixers, physical hardware noise simulation, and the classical baselines solving the same problems.
         </p>
       </div>
 
@@ -132,6 +132,66 @@ export const Evidence: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* How each method works */}
+      <section className="bg-surface border border-line p-6 space-y-4" aria-labelledby="methods-guide">
+        <div>
+          <h2 id="methods-guide" className="text-sm font-medium text-text">How each method works</h2>
+          <p className="text-xs text-muted mt-1">Every method gets the same stocks, estimates and rules, and every answer is judged by the same function. Only the way of searching differs.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {METHODS.map((m) => (
+            <div key={m.name} className="bg-bg border border-line p-4 space-y-2">
+              <h3 className="text-xs font-medium text-text">{m.name}</h3>
+              <p className="text-xs text-muted"><span className="text-text">What it does:</span> {m.does}</p>
+              <p className="text-xs text-muted"><span className="text-text">Guarantee:</span> {m.guarantee}</p>
+              <p className="text-xs text-muted"><span className="text-text">Cost:</span> {m.cost}</p>
+              <p className="text-xs text-muted"><span className="text-text">Role here:</span> {m.role}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted">
+          On the 5 test problems in the "Classical baselines vs QAOA" study (10 stocks, pick 5: 252 possible portfolios), all four methods found the exact optimum; brute force took about 0.005 s and QAOA about 4.6 s on a simulator. At this size the problem is easy for every method, so the study shows that QAOA works, not that it is faster or better.
+        </p>
+      </section>
     </div>
   );
 };
+
+const METHODS = [
+  {
+    name: 'Markowitz mean-variance model (the problem itself)',
+    does: 'Scores a portfolio by its risk (variance from the covariance matrix) against its expected return. The efficient frontier is the set of portfolios with the best return for each level of risk.',
+    guarantee: 'Not a solver: it defines what "best" means. The frontier chart places the answer from each method against the best possible trade-offs.',
+    cost: 'Needs estimates of return and covariance from past prices; those estimates are the weakest link.',
+    role: 'Every method below minimises the same objective: risk aversion × variance − (1 − risk aversion) × (return − trading cost).',
+  },
+  {
+    name: 'Brute force (exact)',
+    does: 'Checks every possible portfolio of exactly K stocks and keeps the best one that obeys every rule.',
+    guarantee: 'Always finds the true optimum.',
+    cost: 'Grows explosively: 252 portfolios for 5 of 10 stocks, but about 10 billion for 10 of 50.',
+    role: 'The ground truth: QAOA and the other methods are scored against it.',
+  },
+  {
+    name: 'Relaxation + rounding',
+    does: 'Pretends each yes/no choice can be a fraction, solves that smooth convex problem quickly (CVXPY), then rounds to the top K stocks.',
+    guarantee: 'None after rounding: the rounded portfolio can miss the optimum or break a rule.',
+    cost: 'Very fast, and scales to large universes.',
+    role: 'The standard classical shortcut a practitioner would try first.',
+  },
+  {
+    name: 'Simulated annealing',
+    does: 'Starts from a random portfolio and keeps flipping stocks in and out, accepting worse moves early on (like cooling metal) so it can escape poor local choices.',
+    guarantee: 'None, but it usually finds very good answers with enough sweeps.',
+    cost: 'Fast; works on the same QUBO the quantum circuit uses.',
+    role: 'A heuristic on the identical QUBO, so the fairest classical comparison for QAOA.',
+  },
+  {
+    name: 'QAOA (quantum)',
+    does: 'Encodes the QUBO in a quantum circuit, tunes its angles with a classical optimiser, then samples portfolios; the best valid sample is the answer.',
+    guarantee: 'None; more depth can help, and hardware noise hurts (see the noise study).',
+    cost: 'Slow on a simulator, and limited by qubit count and noise on real devices.',
+    role: 'The method under test, compared honestly against the three above.',
+  },
+];

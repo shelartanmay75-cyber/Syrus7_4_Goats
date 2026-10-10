@@ -1,4 +1,4 @@
-"""Evidence studies (U14): depth, optimiser, init, mixer and noise, written as Study JSON (CONTRACTS.md 2.7).
+"""Evidence studies (U14): depth, optimiser, init, mixer, noise and the classical baselines, written as Study JSON (CONTRACTS.md 2.7).
 
     uv run python scripts/run_studies.py [--quick] [--out DIR] [--only depth,optimizer,...] [--force]
 
@@ -21,6 +21,7 @@ sys.path.insert(0, str(BACKEND))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from qportfolio.classical import annealing, relaxation  # noqa: E402
 from qportfolio.classical.brute_force import brute_force  # noqa: E402
 from qportfolio.contracts import QaoaSettings, Study  # noqa: E402
 from qportfolio.data import build_market  # noqa: E402
@@ -123,7 +124,40 @@ def noise(ctx):
             "Metric value", series, notes)
 
 
-STUDIES = {"depth": depth, "optimizer": optimizer, "init": init, "mixer": mixer, "noise": noise}
+def classical(ctx):
+    """Every method's reported portfolio on the same instances: did it hit the exact optimum, and how far off was it?
+
+    Gap = (F - F_min) / (F_max - F_min) over the feasible landscape (0 = optimal, 1 = worst feasible); an infeasible
+    answer counts as 1. QAOA (XY mixer, ramp, COBYLA) is included for reference using its best feasible sample."""
+    methods = {"Brute force (exact)": lambda pr, qb, sd: brute_force(pr)[0],
+               "Relaxation + rounding": lambda pr, qb, sd: relaxation(pr),
+               "Simulated annealing": lambda pr, qb, sd: annealing(pr, qb, seed=sd),
+               "QAOA (XY mixer)": None}  # solved inline below with this instance's landscape
+    hits, gaps, times = {m: [] for m in methods}, {m: [] for m in methods}, {m: [] for m in methods}
+    for seed, problem, qubo, ls in ctx.insts:
+        span = max(ls.f_max - ls.f_min, 1e-12)
+        for name, fn in methods.items():
+            t0 = time.perf_counter()
+            if fn is None:
+                r = qaoa_solve(problem, qubo, QaoaSettings(variant="xy", reps=ctx.p_mid, seed=seed, shots=SHOTS,
+                                                           maxiter=ctx.maxiter), landscape=ls)[0]
+            else:
+                r = fn(problem, qubo, seed)
+            times[name].append(time.perf_counter() - t0)
+            gap = 1.0 if not r.feasible or r.objective is None else max(0.0, (r.objective - ls.f_min) / span)
+            gaps[name].append(gap)
+            hits[name].append(1.0 if gap <= 1e-9 else 0.0)
+    names = list(methods)
+    series = [{"label": "Found the exact optimum (share of instances)", "points": [point(i, hits[m]) for i, m in enumerate(names)]},
+              {"label": "Gap to the optimum (0 = optimal)", "points": [point(i, gaps[m]) for i, m in enumerate(names)]}]
+    axis = ", ".join(f"{i} = {m}" for i, m in enumerate(names))
+    notes = [NOISELESS, "Each method reports one portfolio; QAOA reports its best feasible sample (never repaired).",
+             "Mean runtime per instance: " + ", ".join(f"{m} {np.mean(times[m]):.3f} s" for m in names) + "."]
+    return ("Classical baselines vs QAOA", f"{ctx.base(len(ctx.insts))} Same problems and rules for every method; "
+            f"QAOA uses the XY mixer, p = {ctx.p_mid}, COBYLA, ramp init.", f"Method ({axis})", "Share / gap", series, notes)
+
+
+STUDIES = {"depth": depth, "optimizer": optimizer, "init": init, "mixer": mixer, "noise": noise, "classical": classical}
 
 
 def main(argv: list[str] | None = None) -> None:

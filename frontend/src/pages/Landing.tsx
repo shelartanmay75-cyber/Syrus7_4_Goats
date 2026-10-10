@@ -29,6 +29,7 @@ export function Landing({ onStart, onTour }: { onStart: () => void; onTour: () =
     <div className="space-y-12 md:space-y-16">
       <section aria-labelledby="landing-title" className="pt-4 md:pt-10 md:grid md:grid-cols-[1.15fr_1fr] md:gap-8 md:items-center">
         <div>
+        <p className="font-display text-2xl md:text-3xl uppercase tracking-[0.06em] text-text">Portfolio Pulse</p>
         <Eyebrow>Qiskit Fall Fest 2026 · PS-03</Eyebrow>
         <h1 id="landing-title" className="mt-3 max-w-4xl text-5xl md:text-6xl leading-[0.95]">
           Quantum portfolio picks, with an honest scorecard every run.
@@ -40,6 +41,10 @@ export function Landing({ onStart, onTour }: { onStart: () => void; onTour: () =
           <button type="button" onClick={onStart} className={`${btn} border-white bg-white text-black`}>Start optimizing</button>
           <button type="button" onClick={onTour} className={`${btn} border-line-strong text-text hover:border-white`}>Take the 60-second tour</button>
         </div>
+        <figure className="mt-8 max-w-prose border-l-2 border-accent-blue pl-4">
+          <blockquote className="text-lg text-text italic">"It will fluctuate."</blockquote>
+          <figcaption className="mt-1 text-sm text-muted">J. P. Morgan, asked what the stock market would do (attributed). We show you how much, before you invest.</figcaption>
+        </figure>
         </div>
         {/* Decorative ASCII hero art, drawn as text in the theme colour (see .landing-ascii in index.css) */}
         <div className="landing-ascii-wrap hidden md:block" aria-hidden="true">
