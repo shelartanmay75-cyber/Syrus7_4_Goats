@@ -43,6 +43,24 @@ def capm_returns(sigma: np.ndarray, risk_free: float, market: float = LONG_RUN_M
     return np.log1p(risk_free + beta * (market - risk_free))
 
 
+def apply_estimator(full, method: str):
+    """Swap the market's raw mu for the chosen estimate. Returns (market, estimator info, raw mu, Bayes-Stein mu).
+
+    The run and the /api/screen preview both call this, so the preview keeps the same stocks the run will.
+    """
+    win = full.windows
+    years = (pd.Timestamp(win.est_end) - pd.Timestamp(win.est_start)).days / 365.25
+    shrunk_mu, weight, target = bayes_stein(full.mu, full.sigma, years)
+    estimator = {"method": method, "shrinkage": round(weight, 4), "target": round(target, 6),
+                 "market_return": LONG_RUN_MARKET, "risk_free": RF}
+    past_mu = full.mu
+    if method == "capm":
+        full = replace(full, mu=capm_returns(full.sigma, RF))
+    elif method == "bayes_stein":
+        full = replace(full, mu=shrunk_mu)
+    return full, estimator, past_mu, shrunk_mu
+
+
 def market_betas(market) -> dict[str, float]:
     """Beta of each stock to the equal-weight market of `market`, from the estimation-window covariance only."""
     w = np.full(len(market.tickers), 1.0 / len(market.tickers))
@@ -137,18 +155,8 @@ def run(request: RunRequest, on_progress: Callable[[float, str, dict | None], No
             on_progress(fraction, stage, None)
 
     step(0.0, "Starting")
-    full = build_market(request.tickers)
-    past_mu = full.mu
-    win = full.windows
-    years = (pd.Timestamp(win.est_end) - pd.Timestamp(win.est_start)).days / 365.25
-    shrunk_mu, weight, target = bayes_stein(full.mu, full.sigma, years)
-    estimator = {"method": request.mu_estimator, "shrinkage": round(weight, 4), "target": round(target, 6),
-                 "market_return": LONG_RUN_MARKET, "risk_free": RF}
     # Every later step (pre-screen, QUBO, solvers, frontier, report) uses the chosen estimate of expected return.
-    if request.mu_estimator == "capm":
-        full = replace(full, mu=capm_returns(full.sigma, RF))
-    elif request.mu_estimator == "bayes_stein":
-        full = replace(full, mu=shrunk_mu)
+    full, estimator, past_mu, shrunk_mu = apply_estimator(build_market(request.tickers), request.mu_estimator)
     step(0.05, "Market data loaded")
 
     # prescreen returns applied=False when the universe already fits; target_return adds 3 slack bits it cannot see.

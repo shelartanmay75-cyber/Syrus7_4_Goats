@@ -14,7 +14,7 @@ export const TOUR_STEPS: { target: string; title: string; body: string }[] = [
 
 /** Walk-through of the Portfolio Report; targets are the report's section ids. */
 export const REPORT_TOUR_STEPS: { target: string; title: string; body: string }[] = [
-  { target: 'rp-a', title: 'Three return numbers', body: 'Expected return is the estimate the optimiser used, from how much the stocks move with the market. Recent-history and past performance are shown for comparison; past performance is what already happened, not a forecast.' },
+  { target: 'rp-a', title: 'Three return numbers', body: 'Expected return is the estimate the optimiser used (by default, from how much the stocks move with the market). Recent-history and past performance are shown for comparison; past performance is what already happened, not a forecast.' },
   { target: 'rp-b', title: 'What your money could become', body: 'Pick a horizon to see the estimate compounded, and the typical range around it. Two outcomes in three land inside the range if the model is right.' },
   { target: 'rp-d', title: 'What-if scenarios', body: 'Bull = the market rises 15%, Bear = falls 15%, Crash = falls 30%, Recovery = a 30% crash then a 25% rebound. Each stock moves by its beta times the market. You can edit every move.' },
   { target: 'rp-e', title: 'The real test', body: 'What the same stocks actually did in a year the optimiser never saw, against the NIFTY 50. This is the honest check on everything above.' },

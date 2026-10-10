@@ -33,7 +33,7 @@ export interface RunRequest {
   holdings: Record<string, number>;
   qubit_cap: number;
   qaoa: QaoaSettings;
-  /** Expected-return estimator: Bayes-Stein shrinkage (default) or the raw past average. */
+  /** Expected-return estimator: CAPM (default), Bayes-Stein shrinkage, or the raw past average. */
   mu_estimator?: 'capm' | 'bayes_stein' | 'raw';
 }
 

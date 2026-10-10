@@ -261,10 +261,10 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
                         id="target-return"
                         type="number"
                         min={1}
-                        max={30}
+                        max={15}
                         step={0.5}
                         value={Math.round(targetReturn * 10000) / 100}
-                        onChange={(e) => setTargetReturn(Number(e.target.value) / 100)}
+                        onChange={(e) => setTargetReturn(Math.min(15, Math.max(1, Number(e.target.value))) / 100)}
                         className="w-20 min-h-[36px] bg-bg border border-line px-2.5 py-1 text-xs text-text font-mono focus:border-text"
                       />
                       <span className="text-[11px] text-muted">Min required net annual return after costs (%)</span>
@@ -272,12 +272,13 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
                     <input
                       type="range"
                       min={1}
-                      max={25}
+                      max={15}
                       step={0.5}
                       value={Math.round(targetReturn * 10000) / 100}
                       onChange={(e) => setTargetReturn(Number(e.target.value) / 100)}
                       className="w-full accent-accent-blue cursor-pointer"
                     />
+                    <p className="text-[13px] text-faint">Estimated returns top out near 16% a year, so a floor near that can leave no portfolio that qualifies.</p>
                   </div>
                 ) : (
                   <p className="text-[14px] text-faint">

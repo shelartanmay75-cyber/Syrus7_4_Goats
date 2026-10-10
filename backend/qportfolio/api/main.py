@@ -27,6 +27,7 @@ from qportfolio.contracts import (
     Universe,
 )
 from qportfolio.data import RF, build_market, load_prices, load_universe, prescreen
+from qportfolio.pipeline import apply_estimator
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,8 @@ def get_universe() -> Universe:
 @app.post("/api/screen", response_model=ScreenInfo)
 def screen_universe(request: RunRequest) -> ScreenInfo:
     """Pre-screen stocks to fit qubit budget based on estimation-window Sharpe ratio."""
-    market = build_market(tickers=request.tickers)
+    # Same expected-return estimate as the run, so the preview keeps the same stocks the run will.
+    market, _, _, _ = apply_estimator(build_market(tickers=request.tickers), request.mu_estimator)
     # Subtract 3 qubits if target_return constraint is active (CONTRACTS.md §1.2)
     slack_adjustment = 3 if request.target_return is not None else 0
     qubit_budget = request.qubit_cap - slack_adjustment

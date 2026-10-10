@@ -119,3 +119,16 @@ def test_capm_returns_follow_beta_and_average_the_market():
     beta = (sigma @ w) / (w @ sigma @ w)
     assert list(np.argsort(mu)) == list(np.argsort(beta))
     assert np.isclose(w @ np.expm1(mu), LONG_RUN_MARKET)  # beta averages to 1 over the equal-weight market
+
+
+def test_apply_estimator_swaps_mu_and_keeps_the_raw_one():
+    """The run and the /api/screen preview share this, so both screen on the same expected returns."""
+    from qportfolio.data import RF, build_market
+    from qportfolio.pipeline import apply_estimator, capm_returns
+    full = build_market(None)
+    capm, info, past, _ = apply_estimator(full, "capm")
+    assert info["method"] == "capm"
+    assert np.allclose(capm.mu, capm_returns(full.sigma, RF))
+    assert np.array_equal(past, full.mu)
+    raw, _, _, _ = apply_estimator(full, "raw")
+    assert np.array_equal(raw.mu, full.mu)

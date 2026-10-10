@@ -151,7 +151,7 @@ export const Evidence: React.FC = () => {
           ))}
         </div>
         <p className="text-xs text-muted">
-          On the 5 test problems used by the studies above (10 stocks, pick 5: 252 possible portfolios), all four methods found the exact optimum; brute force took about 0.005 s and QAOA about 4.6 s on a simulator. At this size the problem is easy for every method, so the study shows that QAOA works, not that it is faster or better.
+          The studies above use small problems (10 stocks, pick 5: 252 possible portfolios). At this size brute force checks every portfolio almost instantly and even random guessing often lands on the best one, so the studies show how QAOA's settings (depth, optimiser, start, XY mixer, noise) change its behaviour, not that it is faster or better than the classical methods.
         </p>
       </section>
     </div>

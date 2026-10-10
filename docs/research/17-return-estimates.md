@@ -2,7 +2,7 @@
 
 **Problem.** The report showed +74% expected annual return. That was the raw past average of the stocks the optimiser picked. The optimiser rewards high past returns, so it picks the stocks that just ran up most, and the estimate is biased upward. The same portfolio returned +3.5% in the unseen test year.
 
-**Method choice, without touching the test year.** We split the estimation data: estimate on 2023-10-01..2024-09-30, then check each method per stock on 2024-10-01..2025-09-30. The test year (2025-10-01..2026-09-30) is not used.
+**Method choice, without touching the test year.** We split the estimation data: estimate on 2023-10-01..2024-09-30, then check each method per stock on 2024-10-01..2025-09-30. The choice between methods did not use the test year (2025-10-01..2026-09-30), though the raw estimate's miss on that year is what flagged the problem.
 
 | Estimate (49 stocks) | Average predicted | Average error per stock | Rank correlation with reality |
 |---|---|---|---|
@@ -25,6 +25,8 @@ NIFTY 50 over the same test year: −9.0%. Per stock on the test year, CAPM and 
 
 **Limits.**
 - One validation year and one test year are two samples. CAPM's picks (steel, energy, infrastructure, a lender) may have done well partly by luck in this particular year.
+- A flat 12% for every stock ties CAPM on validation error (19.8 points). CAPM's edge there is a better ranking (0.18), which is weak.
+- The test year was already seen before the method was chosen (it showed the +74% problem), so it is not a fully blind check.
 - The 12% long-run market return is a stated assumption, not fitted to data.
 - Beta is measured against the equal-weight average of the requested universe, not the NIFTY 50 index.
 
