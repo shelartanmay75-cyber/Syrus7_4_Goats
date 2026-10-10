@@ -213,22 +213,18 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
       <Part id="rp-b" letter="B · Returns" title="Expected returns" lead="Where the estimated return comes from, stock by stock, and how it would compound over different horizons.">
         <div className="overflow-x-auto">
           <table className={tableCls}>
-            <thead><tr className="text-left"><th className="py-1 pr-2">Stock</th><th className="py-1 pr-2 text-right">Weight</th><th className="py-1 pr-2 text-right">Estimated annual return</th><th className="py-1 pr-2 text-right">Log return μ</th><th className="py-1 text-right">Contribution (w × μ)</th></tr></thead>
+            <thead><tr className="text-left"><th className="py-1 pr-2">Stock</th><th className="py-1 pr-2 text-right">Weight</th><th className="py-1 text-right">Estimated annual return</th></tr></thead>
             <tbody>
               {h.map((x) => (
                 <tr key={x.ticker} className="border-t border-line">
                   <td className="py-1 pr-2" title={x.name}>{x.symbol}</td>
                   <td className="py-1 pr-2 text-right tabular-nums">{formatPct(x.weight)}</td>
-                  <td className="py-1 pr-2 text-right">{x.mu === null ? '—' : <Delta x={R.simpleAnnual(x.mu)} />}</td>
-                  <td className="py-1 pr-2 text-right tabular-nums">{x.mu === null ? '—' : formatPct(x.mu, { digits: 2 })}</td>
-                  <td className="py-1 text-right tabular-nums">{x.contribution === null ? '—' : formatPct(x.contribution, { digits: 2 })}</td>
+                  <td className="py-1 text-right">{x.mu === null ? '—' : <Delta x={R.simpleAnnual(x.mu)} />}</td>
                 </tr>
               ))}
               <tr className="border-t border-line-strong text-text">
                 <td className="py-1 pr-2">Portfolio</td><td className="py-1 pr-2 text-right">{formatPct(1)}</td>
-                <td className="py-1 pr-2 text-right">{annual === null ? '—' : <Delta x={annual} />}</td>
-                <td className="py-1 pr-2 text-right tabular-nums">{logRet === null ? '—' : formatPct(logRet, { digits: 2 })}</td>
-                <td className="py-1 text-right tabular-nums">{logRet === null ? '—' : formatPct(logRet, { digits: 2 })}</td>
+                <td className="py-1 text-right">{annual === null ? '—' : <Delta x={annual} />}</td>
               </tr>
             </tbody>
           </table>

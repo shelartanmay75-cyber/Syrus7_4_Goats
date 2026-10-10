@@ -122,6 +122,51 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
         </div>
       </div>
 
+      {/* Investment capital: always visible, in Simple mode too */}
+      <div className="p-4 bg-surface border border-line space-y-3">
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <label htmlFor="capital" className="text-xs font-medium text-text uppercase tracking-wider">
+            How much to invest (₹)
+          </label>
+          <span className="text-sm font-mono font-medium text-text">₹{capital.toLocaleString('en-IN')}</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[100000, 500000, 1000000, 5000000].map(val => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setCapital(val)}
+              aria-pressed={capital === val}
+              className={`py-2 px-3 text-xs font-medium border transition-all flex items-center justify-center ${
+                capital === val
+                  ? 'bg-surface-elevated border-accent-blue/70 text-white'
+                  : 'bg-bg border-line text-muted hover:text-text'
+              }`}
+            >
+              ₹{val / 100000} Lakh{val > 100000 ? 's' : ''}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label htmlFor="capital" className="text-[14px] text-muted">Or type any amount:</label>
+          <input
+            id="capital"
+            type="number"
+            inputMode="numeric"
+            min={10000}
+            step={10000}
+            value={capital}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v > 0) setCapital(Math.round(v));
+            }}
+            onBlur={() => { if (capital < 10000) setCapital(10000); }}
+            className="w-40 min-h-[36px] bg-bg border border-line px-2.5 py-1 text-sm text-text font-mono focus:border-text"
+          />
+          <span className="text-[13px] text-faint">Minimum ₹10,000, so every pick can buy whole shares.</span>
+        </div>
+      </div>
+
       {/* Collapsible Additional Constraints Section */}
       <div data-research className="border border-line bg-surface-card">
         <button
@@ -131,7 +176,7 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
         >
           <div className="flex items-center space-x-2.5">
             <span className="text-xs font-medium text-text uppercase tracking-wider">
-              Additional Constraints &amp; Capital
+              Additional Constraints
             </span>
             {activeAdditionalCount > 0 ? (
               <span className="text-[13px] font-mono px-2 py-0.5 bg-accent-blue/15 text-accent-blue-hover border border-accent-blue/40">
@@ -239,34 +284,6 @@ export const ConstraintsForm: React.FC<ConstraintsFormProps> = ({
                     No minimum annual return floor applied.
                   </p>
                 )}
-              </div>
-            </div>
-
-            {/* Total Capital Allocation Chips */}
-            <div className="p-3.5 bg-surface border border-line space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-medium text-text">
-                  Investment Capital (INR ₹)
-                </label>
-                <span className="text-xs font-mono font-medium text-text">
-                  ₹{capital.toLocaleString('en-IN')}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[100000, 500000, 1000000, 5000000].map(val => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setCapital(val)}
-                    className={`py-2 px-3 text-xs font-medium border transition-all flex items-center justify-center ${
-                      capital === val
-                        ? 'bg-surface-elevated border-accent-blue/70 text-white'
-                        : 'bg-bg border-line text-muted hover:text-text'
-                    }`}
-                  >
-                    ₹{val / 100000} Lakh{val > 100000 ? 's' : ''}
-                  </button>
-                ))}
               </div>
             </div>
 
