@@ -84,6 +84,14 @@ def verdict(
         if gap <= 1e-6:
             level = "matched"
             headline = "QAOA matched the exact classical optimum objective."
+            # A matched best sample can hide poor sampling; say so rather than let "matched" read as a clean win.
+            p_opt, p_rand = getattr(qaoa, "p_opt", None), getattr(qaoa, "p_random", None)
+            if p_opt is not None and p_rand is not None and p_opt < p_rand:
+                headline = ("QAOA's best sample matched the exact optimum, but it sampled that optimum "
+                            "less often than random guessing would on this instance.")
+            elif getattr(qaoa, "approx_ratio", 1.0) < 0.5:
+                headline = ("QAOA's best sample matched the exact optimum, but most of its samples "
+                            "were far from it (approximation ratio below 0.5).")
         elif gap <= 0.01:
             level = "near"
             gap_pct = max(0.0, gap * 100.0)
@@ -102,13 +110,15 @@ def verdict(
         p_rand_pct = float(qaoa.p_random) * 100.0
         if qaoa.p_random > 1e-12 and qaoa.p_opt > 1e-12:
             multiplier = qaoa.p_opt / qaoa.p_random
+            relation = (f"{multiplier:.1f}x more often than" if multiplier >= 1
+                        else f"{1 / multiplier:.1f}x less often than")
             d1 = (
-                f"It sampled the exact optimum with probability {p_opt_pct:.1f}%, "
-                f"{multiplier:.1f}x more often than a random guess ({p_rand_pct:.2f}%)."
+                f"It sampled the exact optimum with probability {p_opt_pct:.2f}%, "
+                f"{relation} a random guess ({p_rand_pct:.2f}%)."
             )
         else:
             d1 = (
-                f"It sampled the exact optimum with probability {p_opt_pct:.1f}%, "
+                f"It sampled the exact optimum with probability {p_opt_pct:.2f}%, "
                 f"compared to a uniform random guess baseline of {p_rand_pct:.2f}%."
             )
     else:
@@ -120,7 +130,7 @@ def verdict(
     details.append(d2)
 
     # Detail 3: Size disclaimer
-    d3 = f"Simulated on {n_assets} variables (within the 16-variable qubit cap); this benchmark evaluates small-scale behavior and does not imply scaling to larger instances."
+    d3 = f"Simulated on {n_assets} variables; this benchmark evaluates small-scale behavior and does not imply scaling to larger instances."
     details.append(d3)
 
     # Validate against banned phrases

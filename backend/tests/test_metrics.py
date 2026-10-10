@@ -353,3 +353,17 @@ def test_discrete_pareto_frontier_non_dominated():
                     and (p_b["risk"] < p_a["risk"] or p_b["ret"] > p_a["ret"])
                 )
                 assert not b_dominates_a, f"Point {p_b} dominates {p_a}"
+
+
+def test_matched_verdict_flags_sampling_worse_than_random():
+    """A best sample that matches the optimum must not read as a clean win when P(opt) is below random."""
+    from types import SimpleNamespace as NS
+    from qportfolio.verdict import verdict
+    bf = NS(solver="brute_force", kind="classical", feasible=True, objective=-1.0, runtime_s=0.01)
+    q = NS(solver="qaoa_xy", kind="quantum", feasible=True, objective=-1.0, runtime_s=5.0)
+    land = NS(f_min=-1.0, optimum=[1, 0, 1, 0])
+    metrics = NS(p_opt=0.001, p_random=0.0043, approx_ratio=0.52, feasible_rate=0.95)
+    v = verdict([bf, q], land, metrics)
+    assert v.level == "matched"
+    assert "less often than random guessing" in v.headline
+    assert "less often than a random guess" in v.details[0]

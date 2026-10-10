@@ -7,6 +7,7 @@ ideal and noisy (KTD10 sample-only mode).
 from __future__ import annotations
 
 import math
+import os
 import threading
 import time
 from collections.abc import Callable
@@ -25,7 +26,8 @@ from qportfolio.qubo.ising import to_sparse_pauli
 
 OPTIMIZERS = {"COBYLA": optimizers.cobyla, "SPSA": optimizers.spsa, "NELDER_MEAD": optimizers.nelder_mead}
 LABELS = {"standard": "QAOA (standard mixer)", "xy": "QAOA (XY mixer)"}
-NOISY_SHOTS_CAP = 1024
+# Noisy shots cap; a small CPU-limited host (e.g. a free cloud tier) can lower it with QP_NOISY_SHOTS.
+NOISY_SHOTS_CAP = int(os.environ.get("QP_NOISY_SHOTS", "1024"))
 
 
 def _decode(counts: dict[str, int], n_assets: int) -> dict[str, float]:

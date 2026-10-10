@@ -702,7 +702,7 @@ export const Optimise: React.FC<OptimiseProps> = ({
               <div className="p-2.5 bg-bg border border-line">
                 <span className="text-[13px] text-muted block uppercase">Capital &amp; Costs</span>
                 <span className="text-text font-mono font-medium">₹{(capital / 100000).toFixed(1)}L</span>
-                <span className="text-[13px] text-muted block">Buy 15bps / Sell 25bps</span>
+                <span className="text-[13px] text-muted block">Buy 0.12% / Sell 0.10%</span>
               </div>
             </div>
 

@@ -260,7 +260,7 @@ function ReportBody({ result, onNavigateToOptimise }: { result: RunResult; onNav
 
       {/* D. Scenarios */}
       <Part id="rp-d" letter="D · What if" title="Scenarios" lead="What-ifs, not forecasts. Change a market move and see what the portfolio would do if each stock followed the market by its beta.">
-        <p className="text-sm text-muted mb-3"><strong className="text-text">Hypothetical.</strong> None of these is a prediction. Base is the market moving by the equal-weight average estimated return of all the stocks offered, taken from the estimation window; the NIFTY 50 itself is not estimated, so its column simply mirrors the market move.</p>
+        <p className="text-sm text-muted mb-3"><strong className="text-text">Hypothetical.</strong> None of these is a prediction. Base is the market moving by the equal-weight average estimated return of all the stocks offered, taken from the estimation window; the NIFTY 50 itself is not estimated, so its column simply mirrors the market move. <span className="text-text">Why Base differs from the estimate in A:</span> A uses each picked stock's own estimated return, while every scenario (Base included) moves each stock only by its beta × the market, so the two are different models and need not agree.</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[760px]">
             <thead>

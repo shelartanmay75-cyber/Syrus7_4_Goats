@@ -1,0 +1,16 @@
+# Keeps the free Render backend awake for demos: it sleeps after 15 minutes without traffic,
+# and the first request after that waits about a minute. A ping every 10 minutes avoids that.
+name: keep-alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping API health
+        run: curl -fsS --max-time 120 https://quantum-portfolio-api.onrender.com/api/health || echo "API did not answer (it may be waking up)"

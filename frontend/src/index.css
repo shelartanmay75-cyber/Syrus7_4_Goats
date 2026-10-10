@@ -63,16 +63,17 @@
 .landing-ascii {
   margin: 0;
   font-family: Consolas, 'Courier New', ui-monospace, monospace;
-  font-size: calc(100cqw / 240);
+  font-size: calc(100cqw / 226); /* 400 columns of ~0.55em Consolas glyphs fill the column */
   line-height: 1.2;
   white-space: pre;
-  color: var(--color-text);
-  font-weight: 700; /* white mode: solid black characters */
-  opacity: 1;
+  color: var(--color-text); /* black in white mode, white in black mode */
+  font-weight: 700;
+  /* Glyphs are ~2px tall, so thicken every stroke or the art reads as grey. */
+  -webkit-text-stroke: 0.45px currentColor;
+  text-shadow: 0 0 0.6px currentColor, 0 0 0.6px currentColor;
   user-select: none;
   pointer-events: none;
 }
-.dark .landing-ascii { font-weight: 400; opacity: 0.8; }
 
 /* Simple mode hides research detail; Research mode hides the simple-only copies. */
 :root.simple [data-research] { display: none !important; }
